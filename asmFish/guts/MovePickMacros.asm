@@ -198,17 +198,14 @@ end while
 macro SeeSign JmpTo {
 local ..Positive
 	; ecx move (preserved)
-	; jmp to JmpTo if see value is >=0
-
+	; jmp to JmpTo if see value is >=0, ecx is not clobbered in this case
 
 		mov   r8d, ecx
 		shr   r8d, 6
 		and   r8d, 63	; r8d = from
 		mov   r9d, ecx
 		and   r9d, 63	; r9d = to
-match =1, PROFILE \{
-lock inc qword[profile.moveUnpack]
-\}
+
 	      movzx   eax, byte[rbp+Pos.board+r8]     ; r10 = FROM PIECE
 	      movzx   edx, byte[rbp+Pos.board+r9]     ; r11 = TO PIECE
 		mov   r10, SeeSignBitMask
@@ -225,6 +222,34 @@ end if
 	       call   See.HaveFromTo
 ..Positive:
 }
+
+
+
+
+macro SeeSignTest JmpTo {
+local ..Positive
+	; eax = 1 if see >= 0
+	; eax = 0 if see <  0
+	; jmp to JmpTo if see value is >=0  eax is undefined in this case
+
+		mov   r8d, ecx
+		shr   r8d, 6
+		and   r8d, 63	; r8d = from
+		mov   r9d, ecx
+		and   r9d, 63	; r9d = to
+
+	      movzx   eax, byte[rbp+Pos.board+r8]     ; eax = FROM PIECE
+	      movzx   edx, byte[rbp+Pos.board+r9]     ; edx = TO PIECE
+		mov   r10, SeeSignBitMask
+		and   eax, 7
+		and   edx, 7
+		lea   edx, [rax+8*rdx]
+		 bt   r10, rdx
+		jnc   JmpTo
+		xor   edx, edx
+	       call   SeeTest.HaveFromTo
+}
+
 
 
 macro ScoreCaptures start, ender {
@@ -355,7 +380,7 @@ local ..WhileLoop, ..Normal, ..Special, ..Done, ..Positive, ..Capture, ..Negativ
 	      movzx   r11d, byte[rbp+Pos.board+rcx]	; r11 = to piece
 	      movzx   edx, byte[rbp+Pos.board+r8]	; edx = from piece
 		lea   rcx, [rdi+4*rcx]
-		cmp   r10d, MOVE_TYPE_CASTLE shl 12
+		cmp   r10d, mMOVE_TYPE_EPCAP shl 12
 		jae   ..Special
 	       test   r11d, r11d
 		jnz   ..Capture
@@ -386,8 +411,8 @@ local ..WhileLoop, ..Normal, ..Special, ..Done, ..Positive, ..Capture, ..Negativ
 		jmp   ..Done
 
 ..Special:
-		cmp   r10d, MOVE_TYPE_EPCAP shl 12
-		 jb   ..Normal ; castling
+		cmp   r10d, mMOVE_TYPE_CASTLE shl 12
+		jae   ..Normal ; castling
 		jmp   ..Capture
 
 ..Negative:

@@ -44,17 +44,6 @@ match ='W', VERSION_OS \{
 	      stosb
 }
 
-
-macro ToPedanticMove m, t {
-
-		mov   t#d, m
-		shr   t#d, 12
-		and   t#d, 15
-		and   m, 0x0FFF
-		 or   m, dword[MoveEncoding+4*t]
-
-}
-
 ; macro for string functions
 ;  the string m is put in the code
 ;  and the function fxn is called on it

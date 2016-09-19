@@ -9,6 +9,10 @@ THREAD_STACK_SIZE equ 1048576
 PAWN_HASH_ENTRY_COUNT equ 16384
 MATERIAL_HASH_ENTRY_COUNT equ 8192
 
+; don't print current move info before these
+CURRMOVE_MIN_TIME equ 3000
+CURRMOVE_MIN_DEPTH equ 20
+
 
 ; numa
 RelationProcessorCore = 0
@@ -38,10 +42,10 @@ RelationNumaNode      = 1
 
 
 ; move types
- MOVE_TYPE_NORMAL equ 0
- MOVE_TYPE_PROM   equ 1
- MOVE_TYPE_CASTLE equ 5
- MOVE_TYPE_EPCAP  equ 6
+ mMOVE_TYPE_NORMAL equ 0
+ mMOVE_TYPE_PROM   equ 4
+ mMOVE_TYPE_EPCAP  equ 8
+ mMOVE_TYPE_CASTLE equ 12
 
 ; special moves
  MOVE_NONE    equ 0

@@ -83,18 +83,35 @@ MovePick_GoodCaptures:
 		 je   GenNext_Killers
 	   PickBest   r14, r13, r15
 		mov   ecx, eax
+		mov   edi, eax
 		cmp   eax, dword[rsi+Pick.ttMove]
 		 je   MovePick_GoodCaptures
-	    SeeSign   .Positive
+;;;; good
+;            SeeSign   .Positive
+;                mov   rdx, qword[rsi+Pick.endBadCaptures]
+;               test   eax, eax
+;                 js   .Negative
+
+;;;; better
+ ;               xor   edx, edx
+ ;              call   SeeTest
+ ;               mov   rdx, qword[rsi+Pick.endBadCaptures]
+ ;              test   eax, eax
+ ;                jz   .Negative
+
+;;; best
+	SeeSignTest   .Positive
 		mov   rdx, qword[rsi+Pick.endBadCaptures]
 	       test   eax, eax
-		 js   .Negative
+		 jz   .Negative
+
+
   .Positive:
-		mov   eax, ecx
+		mov   eax, edi
 		lea   rdx, [MovePick_GoodCaptures]
 		ret
   .Negative:
-		mov   dword[rdx], ecx
+		mov   dword[rdx], edi
 		sub   rdx, sizeof.ExtMove
 		mov   qword[rsi+Pick.endBadCaptures], rdx
 		jmp   MovePick_GoodCaptures
@@ -139,7 +156,7 @@ MovePick_Killers:
 		 jz   MovePick_Killers
 		cmp   edi, dword[rsi+Pick.ttMove]
 		 je   MovePick_Killers
-		cmp   edi, MOVE_TYPE_CASTLE shl 12
+		cmp   edi, mMOVE_TYPE_EPCAP shl 12
 		jae   .special
 	       test   eax, eax
 		jnz   MovePick_Killers
@@ -153,8 +170,8 @@ MovePick_Killers:
 ;SD_String '|'
 		ret
 .special:
-		cmp   edi, MOVE_TYPE_EPCAP shl 12
-		jae   MovePick_Killers
+		cmp   edi, mMOVE_TYPE_CASTLE shl 12
+		 jb   MovePick_Killers
 	       call   Move_IsPseudoLegal
 	       test   rax, rax
 		 jz   MovePick_Killers
@@ -423,12 +440,19 @@ MovePick_ProbcutCaptures:
 		 je   GenNext_Recapture
 	   PickBest   r14, r13, r15
 		mov   ecx, eax
+		mov   edi, eax
 		cmp   eax, dword[rsi+Pick.ttMove]
 		 je   MovePick_ProbcutCaptures
-	       call   See
-		cmp   eax, dword[rsi+Pick.threshold]
-		jle   MovePick_ProbcutCaptures
-		mov   eax, ecx
+      ;         call   See
+      ;          cmp   eax, dword[rsi+Pick.threshold]
+      ;          jle   MovePick_ProbcutCaptures
+		mov   edx, dword[rsi+Pick.threshold]
+		add   edx, 1
+	       call   SeeTest
+	       test   eax, eax
+		 jz   MovePick_ProbcutCaptures
+
+		mov   eax, edi
 		lea   rdx, [MovePick_ProbcutCaptures]
 		ret
 

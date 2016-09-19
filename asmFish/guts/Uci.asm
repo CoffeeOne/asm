@@ -672,9 +672,9 @@ UciSetOption:
 	       test   eax, eax
 		jnz   .CheckValue
 
-		lea   rcx, [sz_ttpath]
+		lea   rcx, [sz_ttfile]
 	       call   CmpStringCaseless
-		lea   rbx, [.HashPath]
+		lea   rbx, [.HashFile]
 	       test   eax, eax
 		jnz   .CheckValue
 
@@ -756,7 +756,21 @@ UciSetOption:
 	       test   eax, eax
 		jnz   .PriorityLow
 
-		jmp   UciGetInput
+		lea   rcx, [sz_idle]
+	       call   CmpStringCaseless
+	       test   eax, eax
+		jnz   .PriorityIdle
+
+		lea   rdi, [Output]
+		mov   rax, 'info str'
+	      stosq
+		mov   rax, 'ing unkn'
+	      stosq
+		mov   rax, 'own prio'
+	      stosq
+		mov   eax, 'rity'
+	      stosd
+		jmp   UciWriteOut_NewLine
 
     .PriorityNormal:
 	       call   _SetPriority_Normal
@@ -766,6 +780,9 @@ UciSetOption:
 	       call   _SetPriority_Low
 		jmp   UciGetInput
 
+    .PriorityIdle:
+	       call   _SetPriority_Idle
+		jmp   UciGetInput
 
 
 .ClearHash:
@@ -777,9 +794,7 @@ UciSetOption:
 	      stosq
 		mov   rax, ' cleared'
 	      stosq
-       PrintNewLine
-	       call   _WriteOut_Output
-		jmp   UciGetInput
+		jmp   UciWriteOut_NewLine
 
 .SyzygyPath:
 	; find terminator and replace it with zero
@@ -804,11 +819,9 @@ UciSetOption:
 		mov   eax, 'ses'
 	      stosd
 		sub   rdi, 1
-       PrintNewLine
-	       call   _WriteOut_Output
-		jmp   UciGetInput
+		jmp   UciWriteOut_NewLine
 
-.HashPath:
+.HashFile:
 	       call   SkipSpaces
 	; find terminator and replace it with zero
 		 or   ebx, -1
@@ -942,8 +955,7 @@ UciPerft:
 	     szcall   PrintString, 'error: bad depth '
 		mov   ecx, 8
 	       call   ParseToken
-       PrintNewLine
-		jmp   UciWriteOut
+		jmp   UciWriteOut_NewLine
 
 
 

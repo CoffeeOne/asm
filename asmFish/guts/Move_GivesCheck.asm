@@ -2,7 +2,7 @@
 Move_GivesCheck:
 	; in:  rbp  address of Pos
 	;      rbx  address of State - check info must be filled in
-	;      ecx  move
+	;      ecx  move assumed to be psuedo legal
 	; out: eax =  0 if does not give check
 	;      eax = -1 if does give check
 
@@ -27,7 +27,7 @@ ProfileInc Move_GivesCheck
 		 jc   .DiscoveredCheck
 
 		xor   eax, eax
-		cmp   ecx, (MOVE_TYPE_PROM shl 12)
+		cmp   ecx, mMOVE_TYPE_PROM shl 12
 		jae   .Special
 .Ret:
 		ret
@@ -44,19 +44,14 @@ ProfileInc Move_GivesCheck
 		btr   rdx, r8
 		bts   rdx, r9
 
-		mov   eax, dword[.JmpTable+4*rcx]
+		mov   eax, dword[.JmpTable+4*(rcx-mMOVE_TYPE_PROM)]
 		jmp   rax
 
 
 	      align   8
-.JmpTable:   dd 0
-	     dd .PromKnight
-	     dd .PromBishop
-	     dd .PromRook
-	     dd .PromQueen
-	     dd .Castling
-	     dd .EpCapture
-	     dd 0
+.JmpTable:   dd .PromKnight,.PromBishop,.PromRook,.PromQueen
+	     dd .EpCapture,0,0,0
+	     dd .Castling,0,0,0
 
 
 	      align   8
@@ -145,7 +140,7 @@ ProfileInc Move_GivesCheck
 		ret
 .DiscoveredCheckRet:
 		xor   eax, eax
-		cmp   ecx, (MOVE_TYPE_PROM shl 12)
+		cmp   ecx, mMOVE_TYPE_PROM shl 12
 		jae   .Special.AfterPrologue
 		pop   rdi rsi
 		ret

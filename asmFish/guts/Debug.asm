@@ -454,3 +454,17 @@ if VERBOSE>1
 	add  rsp, 8
 end if
 }
+
+macro ND_UInt64 x {
+if VERBOSE>1
+	push  x
+	push  rdi rax rcx rdx r8 r9 r10 r11
+	lea  rdi, [VerboseOutput]
+	mov rax, qword[rsp+8*8]
+	call PrintUnsignedInteger
+	lea  rcx, [VerboseOutput]
+	call _WriteOut
+	pop r11 r10 r9 r8 rdx rcx rax rdi
+	add  rsp, 8
+end if
+}

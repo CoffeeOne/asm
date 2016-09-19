@@ -56,7 +56,7 @@ end virtual
 	      movzx   edx, byte[rbp+Pos.board+rdx]
 		cmp   rsi, r8
 		jae   .GenDone
-		cmp   ecx, MOVE_TYPE_PROM+3
+		cmp   ecx, mMOVE_TYPE_PROM+3
 		jne   .NextMove
 	       test   edx, edx
 		 jz   .NextMove
@@ -78,7 +78,7 @@ end virtual
 	      movzx   eax, byte[rbp+Pos.board+rax]
 		cmp   rsi, rdi
 		jae   .MovesDone
-		cmp   ecx, MOVE_TYPE_CASTLE shl 12
+		cmp   ecx, mMOVE_TYPE_EPCAP shl 12
 		jae   .MoveLoop
 	       test   eax, eax
 		 jz   .MoveLoop
@@ -204,8 +204,10 @@ end virtual
 		mov   ecx, dword[rsi+ExtMove.move]
 		cmp   rsi, rdi
 		jae   .MovesDone
-		cmp   ecx, MOVE_TYPE_EPCAP shl 12
-		 jb   .MoveLoop
+		shr   ecx, 12
+		cmp   ecx, mMOVE_TYPE_EPCAP
+		jne   .MoveLoop
+		mov   ecx, dword[rsi+ExtMove.move]
 	       call   Move_IsLegal
 	       test   eax, eax
 		 jz   .MoveLoop
@@ -245,8 +247,9 @@ end virtual
 		lea   rsi, [.stack]
 		jmp   .CheckLoop
 .CheckNext:	mov   ecx, dword[rsi+ExtMove.move]
-		cmp   ecx, MOVE_TYPE_EPCAP shl 12
-		 jb   .Return2_r13d
+		shr   ecx, 12
+		cmp   ecx, mMOVE_TYPE_EPCAP
+		jne   .Return2_r13d
 		add   rsi, 8
 .CheckLoop:	cmp   rsi, rdi
 		 jb   .CheckNext
@@ -335,15 +338,17 @@ end virtual
 		cmp   rsi, rdi
 		jae   .MovesDone
 		and   eax, 7
-		cmp   ecx, MOVE_TYPE_EPCAP shl 12
-		jae   .MoveLoop
+		shr   ecx, 12
+		cmp   ecx, mMOVE_TYPE_EPCAP
+		 je   .MoveLoop
 		cmp   eax, Pawn
 		jne   .MoveLoop
-		cmp   ecx, MOVE_TYPE_CASTLE shl 12
-		jae   @f
+		cmp   ecx, mMOVE_TYPE_CASTLE
+		 je   @f
 	       test   edx, edx
 		jnz   .MoveLoop
-	@@:    call   Move_IsLegal
+	@@:	mov   ecx, dword[rsi+ExtMove.move]
+	       call   Move_IsLegal
 	       test   eax, eax
 		 jz   .MoveLoop
 		mov   ecx, dword[rsi+ExtMove.move]
@@ -438,11 +443,11 @@ SD_String 'B|'
 		;jae   .MoveLoop
 		cmp   eax, Pawn
 		 je   .MoveLoop
-		cmp   ecx, MOVE_TYPE_CASTLE shl 12
+		cmp   ecx, mMOVE_TYPE_EPCAP shl 12
 		jae   @f
 	       test   edx, edx
 		jnz   .MoveLoop
-	@@:
+	@@:	mov   ecx, dword[rsi+ExtMove.move]
 	       call   Move_IsLegal
 	       test   eax, eax
 		 jz   .MoveLoop
@@ -614,8 +619,10 @@ end virtual
 		mov   ecx, dword[rsi+ExtMove.move]
 		cmp   rsi, rdi
 		jae   .MovesDone
-		cmp   ecx, MOVE_TYPE_EPCAP shl 12
-		 jb   .MoveLoop
+		shr   ecx, 12
+		cmp   ecx, mMOVE_TYPE_EPCAP
+		jne   .MoveLoop
+		mov   ecx, dword[rsi+ExtMove.move]
 	       call   Move_IsLegal
 	       test   eax, eax
 		 jz   .MoveLoop
@@ -663,8 +670,10 @@ end virtual
 		mov   ecx, dword[rsp+ExtMove.move]
 		cmp   rsi, rdi
 		jae   .CheckQuiets
-		cmp   ecx, MOVE_TYPE_EPCAP shl 12
-		jae   .CaptureLoop
+		shr   eax, 12
+		cmp   ecx, mMOVE_TYPE_EPCAP
+		 je   .CaptureLoop
+		mov   ecx, dword[rsp+ExtMove.move]
 	       call   Move_IsLegal
 	       test   eax, eax
 		jnz   .Return_v

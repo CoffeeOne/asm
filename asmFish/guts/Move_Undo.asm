@@ -61,7 +61,7 @@ ProfileInc moveUnpack
 		xor   qword[rbp+Pos.typeBB+8*rax], rdx
 		xor   qword[rbp+Pos.typeBB+8*rsi], rdx
 
-		cmp   ecx, MOVE_TYPE_PROM
+		cmp   ecx, mMOVE_TYPE_PROM
 		jae   .Special
 
 if PEDANTIC
@@ -104,20 +104,20 @@ jmp   Move_Undo_Check
 	      align   8
 .Special:
 		xor   edx, edx
-		cmp   ecx, MOVE_TYPE_CASTLE
-		 je   .Castle
+		cmp   ecx, mMOVE_TYPE_EPCAP
+		 ja   .Castle
 if PEDANTIC
 	      movzx   eax, byte[rbp+Pos.pieceIdx+r9]
 		mov   byte[rbp+Pos.pieceList+rax], r8l
 		mov   byte[rbp+Pos.pieceIdx+r8], al
 		mov   eax, r11d 		; save a copy of captured piece
 end if
-		jae   .EpCapture
+		 je   .EpCapture
 
 .Prom:
 	; change promoted piece back to pawn on r8d
 		lea   eax, [8*rsi+Pawn]
-		lea   ecx, [rcx-MOVE_TYPE_PROM+Knight]
+		lea   ecx, [rcx-mMOVE_TYPE_PROM+Knight]
 		bts   rdx, r8
 		 or   qword[rbp+Pos.typeBB+8*Pawn], rdx
 		xor   qword[rbp+Pos.typeBB+8*rcx], rdx

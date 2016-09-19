@@ -103,24 +103,6 @@ Search_Init:
 		cmp   rbp, 16				      ; 0B91 _ 48: 83. FD, 10
 		jnz   ._0053				      ; 0B95 _ 75, A1
 
-if PEDANTIC
-		mov   dword[MoveEncoding+4*0], (0 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*1], (1 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*2], (1 shl 14) + (1 shl 12)
-		mov   dword[MoveEncoding+4*3], (1 shl 14) + (2 shl 12)
-		mov   dword[MoveEncoding+4*4], (1 shl 14) + (3 shl 12)
-		mov   dword[MoveEncoding+4*5], (3 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*6], (2 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*7], (0 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*8], (0 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*9], (0 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*10], (0 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*11], (0 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*12], (0 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*13], (0 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*14], (0 shl 14) + (0 shl 12)
-		mov   dword[MoveEncoding+4*15], (0 shl 14) + (0 shl 12)
-end if
 		pop   rbx rsi rdi rbp r12 r13 r14
 		ret
 

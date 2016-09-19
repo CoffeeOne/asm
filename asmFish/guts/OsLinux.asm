@@ -721,6 +721,10 @@ _SetPriority_Low:
 		mov   edx, 10
 		jmp   @b
 
+_SetPriority_Idle:
+		mov   edx, 19
+		jmp   @b
+
 
 
 

@@ -194,6 +194,8 @@ struct State
  dcCandidates	rq 1
  pinned 	rq 1
  checkSq	 rq 8
+ blockersForKing  rq 2
+ pinnersForKing   rq 2
 ; Stack struct
 _stack_start rb 0
  pv		rq 1
@@ -347,7 +349,7 @@ struct Thread
  failedLow	  rb 1
  easyMovePlayed   rb 1
  resetCalls	  rb 1
-		  rb 1
+ skipCurrMove	  rb 1
  maxPly 	  rb 1
 		  rb 1
  nodes		rq 1

@@ -101,7 +101,7 @@ match =Knight, Pt \{
 	Outpost1	  equ ((65 shl 16) + (20))
 	ReachableOutpost0 equ ((21 shl 16) + (5) )
 	ReachableOutpost1 equ ((35 shl 16) + (8) )
-	KingAttackWeight equ 7
+	KingAttackWeight equ 78
 	MobilityBonus	 equ MobilityBonus_Knight
 \}
 match =Bishop, Pt \{
@@ -109,15 +109,15 @@ match =Bishop, Pt \{
 	Outpost1	  equ ((29 shl 16) + (8))
 	ReachableOutpost0 equ ((8 shl 16) + (0) )
 	ReachableOutpost1 equ ((14 shl 16) + (4))
-	KingAttackWeight equ 5
+	KingAttackWeight equ 56
 	MobilityBonus	 equ MobilityBonus_Bishop
 \}
 match =Rook, Pt \{
-	KingAttackWeight equ 4
+	KingAttackWeight equ 45
 	MobilityBonus	 equ MobilityBonus_Rook
 \}
 match =Queen, Pt \{
-	KingAttackWeight equ 1
+	KingAttackWeight equ 11
 	MobilityBonus	 equ MobilityBonus_Queen
 	WeakQueen	 equ ((35 shl 16) + (  0))
 \}
@@ -454,11 +454,11 @@ match =Black, Us
 	Up    equ DELTA_S
 \}
 
-	QueenContactCheck equ 89
-	QueenCheck  equ 62
-	RookCheck   equ 57
-	BishopCheck equ 48
-	KnightCheck equ 78
+	QueenContactCheck equ 997
+	QueenCheck  equ 695
+	RookCheck   equ 638
+	BishopCheck equ 538
+	KnightCheck equ 874
 	SafeCheck  equ	((20 shl 16) + (20))
 	OtherCheck equ	((10 shl 16) + (10))
 
@@ -493,36 +493,37 @@ ED_Int rsi
 	       andn   r9, r9, qword[.ei.kingRing+8*Us]
 		and   r9, qword[.ei.attackedBy+8*(8*Them+0)]
 	; r9=b
-		mov   eax, 72
+		mov   eax, 807
 		mov   edi, dword[.ei.kingAttackersCount+4*Them]
 	       imul   edi, dword[.ei.kingAttackersWeight+4*Them]
 		cmp   edi, eax
 	      cmovg   edi, eax
-	       imul   eax, dword[.ei.kingAdjacentZoneAttacksCount+4*Them], 9
+	       imul   eax, dword[.ei.kingAdjacentZoneAttacksCount+4*Them], 101
 		add   edi, eax
 	     popcnt   rax, r8, rcx
-	       imul   eax, 21
+	       imul   eax, 235
 		add   edi, eax
 	     popcnt   rax, r9, rcx
 		mov   rdx, qword[.ei.pinnedPieces+8*Us]
 		neg   rdx
 		adc   eax, 0
-	       imul   eax, 12
+	       imul   eax, 134
 		add   edi, eax
 		mov   rax, qword[rbp+Pos.typeBB+8*Them]
 		and   rax, qword[rbp+Pos.typeBB+8*Queen]
 		cmp   rax, 1
 		sbb   eax, eax
-		and   eax, 64
+		and   eax, 717
 		sub   edi, eax
 		lea   eax, [rsi+0x08000]
 		sar   eax, 16
-		cdq
-		and   edx, 7
-		add   eax, edx
-		sar   eax, 3
+	       imul   eax, 7
+		cdq	       ;
+		mov   ecx, 5   ;
+	       idiv   ecx      ;
+		sub   edi, 5
 		sub   edi, eax
-	; edi = attackUnits
+	; edi = kingDanger
 
 		mov   r9, qword[rbp+Pos.typeBB+8*Them]
 	       andn   r9, r9, qword[.ei.attackedBy+8*(8*Them+Queen)]
@@ -532,7 +533,7 @@ ED_Int rsi
 	       imul   eax, QueenContactCheck
 		add   edi, eax
 
-	; lower 32 bits of rsi are for additional attackunits, which is always positive
+	; lower 32 bits of rsi are for additional kingDanger, which is always positive
 		shl   rsi, 32
 
 		mov   r8, qword[.ei.attackedBy+8*(8*Us+0)]
@@ -631,20 +632,20 @@ ED_Int rsi
 		and   rcx, rax
 		add   rsi, rcx
 
-	; Finally, extract the king danger score from the KingDanger[]
-	; array and subtract the score from the evaluation.
-
+	; Compute the king danger score and subtract it from the evaluation
 		add   edi, esi
 		shr   rsi, 32
-
 		xor   eax, eax
+	       test   edi, edi
+	      cmovs   edi, eax
+	       imul   edi, edi
+		shr   edi, 12
+		mov   eax, 2*BishopValueMg
 		cmp   edi, eax
-	      cmovl   edi, eax
-		mov   eax, 399
-		cmp   edi, eax
-	      cmovg   edi, eax
+	      cmova   edi, eax
 
-		sub   esi, dword[KingDanger+4*rdi]
+		shl   edi, 16
+		sub   esi, edi
 		jmp   ..AllDone
 
 ..DoKingSafety:
@@ -1334,7 +1335,7 @@ match =Black, Us
 
 	      movzx   ecx, byte[rdi+PawnEntry.openFiles]
 		add   ecx, ecx
-	     popcnt   rdx, qword[rbp+Pos.typeBB+8*Us], rcx
+	     popcnt   rdx, qword[rbp+Pos.typeBB+8*Us], r8
 		sub   edx, ecx
 	       imul   edx, edx
 
@@ -1438,53 +1439,35 @@ ED_NewLine
 		 or   r14, qword[rbp+Pos.typeBB+8*Black]
 		 or   r12, qword[rbp+Pos.typeBB+8*Bishop]
 		mov   esi, dword[rbp+Pos.sideToMove]
+
+	if PEDANTIC
+	      movzx   eax, byte[rbp+Pos.pieceList+16*(8*White+King)]
+	      movzx   edx, byte[rbp+Pos.pieceList+16*(8*Black+King)]
+	else
 		mov   rax, qword[rbp+Pos.typeBB+8*King]
-		and   rax, qword[rbp+Pos.typeBB+8*rsi]
+		and   rax, qword[rbp+Pos.typeBB+8*White]
 		bsf   rax, rax
-	      movzx   edx, byte[rbx+State.ksq]
-	; eax = our kings square
-	; edx = their king square
-		mov   dword[.ei.ksq+4*rsi], eax
-		mov   r8, qword[KingAttacks+8*rax]
-		lea   ecx, [8*rsi]
-		mov   qword[.ei.attackedBy+8*(rcx+King)], r8
-		mov   r10, qword[rbx+State.pinned]
-		mov   qword[.ei.pinnedPieces+8*rsi], r10
-		xor   esi, 1
-		mov   dword[.ei.ksq+4*rsi], edx
-		mov   r9, qword[KingAttacks+8*rdx]
-		lea   ecx, [8*rsi]
-		mov   qword[.ei.attackedBy+8*(rcx+King)], r9
-		mov   rax, qword[RookAttacksPDEP+8*rdx]
-		and   rax, r13
-		mov   rcx, qword[BishopAttacksPDEP+8*rdx]
-		and   rcx, r12
-		 or   rax, rcx
-		shl   edx, 6+3
-		lea   rdx, [BetweenBB+rdx]
-		mov   ecx, esi
-		xor   ecx, 1
-		xor   r10, r10
-		mov   qword[.ei.attackedBy+8*0], r10
-		mov   qword[.ei.attackedBy+8*8], r10
-		and   rax, qword[rbp+Pos.typeBB+8*rcx]
-		 jz   .NoPinned1       ; 21.59%
-.YesPinned1:
-		bsf   rcx, rax
-.PinnedLoop1:
-		mov   rcx, qword[rdx+8*rcx]
-	       blsr   rax, rax, r9
-		and   rcx, r14
-	       blsr   r8, rcx, r9
-		neg   r8
-		sbb   r8, r8
-	       andn   rcx, r8, rcx
-		 or   r10, rcx
-		bsf   rcx, rax
-		jnz   .PinnedLoop1
-		and   r10, qword[rbp+Pos.typeBB+8*rsi]
-.NoPinned1:
-		mov   qword[.ei.pinnedPieces+8*rsi], r10
+		mov   rdx, qword[rbp+Pos.typeBB+8*King]
+		and   rdx, qword[rbp+Pos.typeBB+8*Black]
+		bsf   rdx, rdx
+	end if
+
+		mov   dword[.ei.ksq+4*White], eax
+		mov   dword[.ei.ksq+4*Black], edx
+		mov   rax, qword[KingAttacks+8*rax]
+		mov   rdx, qword[KingAttacks+8*rdx]
+		xor   rcx, rcx
+		mov   qword[.ei.attackedBy+8*(8*White+0   )], rcx
+		mov   qword[.ei.attackedBy+8*(8*White+King)], rax
+		mov   qword[.ei.attackedBy+8*(8*Black+0   )], rcx
+		mov   qword[.ei.attackedBy+8*(8*Black+King)], rdx
+
+		mov   rax, qword[rbp+Pos.typeBB+8*White]
+		mov   rdx, qword[rbp+Pos.typeBB+8*Black]
+		and   rax, qword[rbx+State.blockersForKing+8*White]
+		and   rdx, qword[rbx+State.blockersForKing+8*Black]
+		mov   qword[.ei.pinnedPieces+8*White], rax
+		mov   qword[.ei.pinnedPieces+8*Black], rdx
 
 
 

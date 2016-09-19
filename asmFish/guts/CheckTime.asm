@@ -1,6 +1,10 @@
 CheckTime:
-		cmp   byte[limits.ponder], 0
-		jnz   .return
+; out eax = 0 if a lot of time has passed
+;     eax = -1 if not a lot of time has passed
+
+		xor   eax, eax
+		cmp   al, byte[limits.ponder]
+		jne   .return
 
 	       call   _GetTime
 		sub   rax, qword[time.startTime]
@@ -23,6 +27,8 @@ CheckTime:
 		jae   .stop
 	@@:
 .return:
+		sub   rax, CURRMOVE_MIN_TIME
+		sar   eax, 31
 		ret
 
 .stop:
@@ -33,5 +39,6 @@ GD_String 'setting signals.stop in CheckTime'
 GD_NewLine
 pop   rax
 }
-		mov   byte[signals.stop], -1
+		 or   eax, -1
+		mov   byte[signals.stop], al
 		ret

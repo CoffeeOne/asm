@@ -436,7 +436,7 @@ SD_String '|'
 
 	; do not search moves with negative see value
 	if InCheck eq 0
-		lea   eax, [rsi-MOVE_TYPE_PROM]
+		lea   eax, [rsi-mMOVE_TYPE_PROM]
 		cmp   eax, 4
 		 jb   .DontContinue
 	else
@@ -444,24 +444,30 @@ SD_String '|'
 		cmp   edi, VALUE_MATED_IN_MAX_PLY
 		jle   .DontContinue
 
-	     Assert   ne, esi, MOVE_TYPE_CASTLE, 'castling encountered in qsearch<InCheck=true>'
-		cmp   esi, MOVE_TYPE_PROM
+	     Assert   ne, esi, mMOVE_TYPE_CASTLE, 'castling encountered in qsearch<InCheck=true>'
+		cmp   esi, mMOVE_TYPE_PROM
 		jae   .DontContinue	   ; catch MOVE_TYPE_EPCAP
 	       test   r15d, r15d
 		jnz   .DontContinue
 	end if
-	    SeeSign   .DontContinue
+
+
+;            SeeSign   .DontContinue
+;               test   eax, eax
+;                 js   .MovePickLoop
+	SeeSignTest   .DontContinue
+		mov   ecx, dword[.move]
 	       test   eax, eax
-		 js   .MovePickLoop
+		 jz   .MovePickLoop
+
 .DontContinue:
 
-	; prepare square for prefetch
+
+	; speculative prefetch
 		mov   edx, ecx
 		and   edx, 63				; edx = to
 		shr   ecx, 6
 		and   ecx, 63				; ecx = from
-
-	; speculative prefetch
 		mov   rax, qword[rbx+State.key]
 		xor   rax, qword[Zobrist_side]
 		xor   rax, qword[Zobrist_Pieces+r14+8*rcx]
@@ -715,10 +721,17 @@ pop r15 r14 r13 rax
 
 	      align   8
 .ContinueFromFutilityBase:
-	       call   See
+	   ;    call   See
+	   ;     mov   edx, r12d
+	   ;     cmp   eax, 0
+	   ;      jg   .SkipFutilityPruning
+		mov   edx, 1
+	       call   SeeTest
+		mov   ecx, dword[.move]
 		mov   edx, r12d
-		cmp   eax, 0
-		 jg   .SkipFutilityPruning
+	       test   eax, eax
+		jnz   .SkipFutilityPruning
+
 
 	      align   8
 .ContinueFromFutilityValue:

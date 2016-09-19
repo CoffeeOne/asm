@@ -71,6 +71,8 @@ virtual at rsp
   .ttHit		  rb 1
   .moveCountPruning	  rb 1
 
+
+
   .quietsSearched rd 64
   .movepick	  rb sizeof.Pick       ; 116
 
@@ -173,6 +175,7 @@ match =1, DEBUG \{
 		mov   byte[rax+Thread.resetCalls], -1
 		jnz   @b
 	       call   CheckTime
+		mov   byte[rbp-Thread.rootPos+Thread.skipCurrMove], al
 	.dontchecktime:
 
 
@@ -244,7 +247,7 @@ match =1, DEBUG \{
 		mov   ecx, dword[rbx+State.excludedMove]
 		mov   dword[.excludedMove], ecx
 if PEDANTIC
-     ToPedanticMove   ecx, rax
+;     ToPedanticMove   ecx, rax
      SD_String 'em'
      SD_Int rcx
      SD_String '|'
@@ -559,9 +562,9 @@ end if
 		xor   edi, edi
 	       test   ecx, ecx
 		 jz   .9NoTTMove
-		cmp   eax, MOVE_TYPE_CASTLE
+		cmp   eax, mMOVE_TYPE_CASTLE
 		 je   .9NoTTMove
-		cmp   eax, MOVE_TYPE_EPCAP
+		cmp   eax, mMOVE_TYPE_EPCAP
 		 je   @f
 	       test   edx, edx
 		 jz   .9NoTTMove
@@ -570,9 +573,11 @@ end if
 	       test   rax, rax
 		 jz   .9NoTTMove
 		mov   ecx, dword[.ttMove]
-	       call   See
-		cmp   eax, dword[rsi+Pick.threshold]
-		jle   .9NoTTMove
+		mov   edx, dword[rsi+Pick.threshold]
+		add   edx, 1
+	       call   SeeTest
+	       test   eax, eax
+		 jz   .9NoTTMove
 		mov   edi, dword[.ttMove]
 		add   qword[rsi+Pick.endMoves], sizeof.ExtMove
 .9NoTTMove:
@@ -814,20 +819,6 @@ SD_String '|'
 ;SD_Int rax
 ;SD_String '|'
 
-if VERBOSE < 2
-if PEDANTIC
-	if .RootNode eq 1
-	      movzx   eax, byte[limits.useTimeMgmt]
-		 or   eax, dword[rbp-Thread.rootPos+Thread.idx]
-		neg   eax
-		mov   ecx, dword[.depth]
-		sub   ecx, 20
-		 or   eax, ecx
-		jns   .PrintCurrentMove
-.PrintCurrentMoveRet:
-	end if
-end if
-end if
 
 		xor   eax, eax
 	if .PvNode eq 1
@@ -835,14 +826,25 @@ end if
 	end if
 		mov   dword[.extension], eax
 
+if VERBOSE < 2
+	if .RootNode eq 1
+		mov   edx, dword[.depth]
+	      movsx   eax, byte[rbp-Thread.rootPos+Thread.skipCurrMove]
+		cmp   edx, CURRMOVE_MIN_DEPTH*ONE_PLY
+		 jb   @f
+		 or   eax, dword[rbp-Thread.rootPos+Thread.idx]
+		 jz   .PrintCurrentMove
+.PrintCurrentMoveRet:
+		@@:
+	end if
+end if
+
+
 
 		mov   ecx, dword[.move]
 		mov   edx, ecx
 		shr   edx, 6
 		and   edx, 63
-match =1, PROFILE \{
-lock inc qword[profile.moveUnpack]
-\}
 
 	      movzx   edx, byte[rbp+Pos.board+rdx]
 		mov   eax, ecx
@@ -851,17 +853,16 @@ lock inc qword[profile.moveUnpack]
 		add   edx, eax
 		mov   dword[.moved_piece_to_sq], edx
 	; moved_piece_to_sq = index of [moved_piece][to_sq(move)]
-		shr   ecx, 12
+		shr   ecx, 14
 	      movzx   eax, byte[rbp+Pos.board+rax]
-		 or   al, byte[CaptureOrPromotion_or+rcx]
-		and   al, byte[CaptureOrPromotion_and+rcx]
+		 or   al, byte[_CaptureOrPromotion_or+rcx]
+		and   al, byte[_CaptureOrPromotion_and+rcx]
 		mov   byte[.captureOrPromotion], al
 
 
 		mov   ecx, dword[.move]
 	       call   Move_GivesCheck
 		mov   byte[.givesCheck], al
-
 
 		mov   edx, dword[.depth]
 	      movzx   ecx, byte[.improving]
@@ -886,9 +887,22 @@ lock inc qword[profile.moveUnpack]
 		 jz   .12dont_extend
 	       test   edx, edx
 		jnz   .12dont_extend
-	    SeeSign   .12extend_oneply
+; good
+;            SeeSign   .12extend_oneply
+;               test   eax, eax
+;                 js   .12dont_extend
+ ; better
+ ;               xor   edx, edx
+ ;              call   SeeTest
+ ;              test   eax, eax
+ ;                jz   .12dont_extend
+  ; best
+	SeeSignTest   .12extend_oneply
 	       test   eax, eax
-		 js   .12dont_extend
+		 jz   .12dont_extend
+
+
+
 .12extend_oneply:
 		mov   dword[.extension], 1
 .12dont_extend:
@@ -1036,21 +1050,35 @@ ProfileInc moveUnpack
 .13check_see:
 	; Prune moves with negative SEE at low depths
 		mov   ecx, dword[.move]
-	       imul   edi, edi
-	       imul   edi, -35
-	    SeeSign   .13done
-		cmp   eax, edi
-		 jl   .MovePickLoop
+;               imul   edi, edi
+;               imul   edi, -35
+;            SeeSign   .13done
+;                cmp   eax, edi
+;                 jl   .MovePickLoop
+	       imul   edx, edi, -35
+	       imul   edx, edi
+	       call   SeeTest
+	       test   eax, eax
+		 jz   .MovePickLoop
+
 		jmp   .13done
 .13else:
 		mov   ecx, dword[.move]
-	       imul   edi, edx, -35
-	       imul   edi, edx
+;               imul   edi, edx, -35
+;               imul   edi, edx
+;                cmp   edx, 7*ONE_PLY
+;                jge   .13done
+;            SeeSign   .13done
+;                cmp   eax, edi
+;                 jl   .MovePickLoop
 		cmp   edx, 7*ONE_PLY
 		jge   .13done
-	    SeeSign   .13done
-		cmp   eax, edi
-		 jl   .MovePickLoop
+	       imul   edx, edx
+	       imul   edx, -35
+	       call   SeeTest
+	       test   eax, eax
+		 jz   .MovePickLoop
+
 .13done:
     end if
 
@@ -1142,16 +1170,17 @@ ProfileInc moveUnpack
 		jmp   .15skipA
 .15testA:
 		mov   ecx, dword[.move]
-		cmp   ecx, MOVE_TYPE_PROM shl 12
+		cmp   ecx, mMOVE_TYPE_PROM shl 12
 		jae   .15skipA
 		lea   eax, [r15d-Pawn]
 	       test   eax, 7
 		 jz   .15skipA
 		mov   r9d, r12d
 		mov   r8d, r13d
-	       call   See.HaveFromTo
+		xor   edx, edx
+	       call   SeeTest.HaveFromTo
 	       test   eax, eax
-		jns   .15skipA
+		jnz   .15skipA
 		sub   edi, 2*ONE_PLY
 .15skipA:
 
@@ -1733,7 +1762,6 @@ end if
     end if
 
 if VERBOSE < 2
-if PEDANTIC = 1
     if .RootNode eq 1
 	      align   8
 .PrintCurrentMove:
@@ -1764,13 +1792,10 @@ if PEDANTIC = 1
 	       call   PrintUnsignedInteger
 		mov   rcx, rsp
        PrintNewLine
-	if VERBOSE = 0
 	       call   _WriteOut
-	end if
 		add   rsp, 128
 		jmp   .PrintCurrentMoveRet
     end if
-end if
 end if
 
 

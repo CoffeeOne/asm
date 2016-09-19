@@ -1129,7 +1129,7 @@ SetCastlingRights:
 		mov   qword[rbp-Thread.rootPos+Thread.castling_path+8*r15], rax
 
 	; set castling move
-		mov   eax, MOVE_TYPE_CASTLE
+		mov   eax, mMOVE_TYPE_CASTLE
 		shl   eax, 6
 		add   eax, edi
 		shl   eax, 6

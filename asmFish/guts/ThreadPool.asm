@@ -195,6 +195,7 @@ end if
 		mov   dword[r14+Thread.rootDepth], eax
 		mov   qword[r14+Thread.nodes], rax
 		mov   byte[r14+Thread.maxPly], al
+		mov   byte[r14+Thread.skipCurrMove], -1
 
 		lea   rsi, [limits.moveVec]
 		lea   rdi, [.moveList]

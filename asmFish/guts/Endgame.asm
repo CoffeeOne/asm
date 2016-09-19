@@ -455,6 +455,162 @@ ND_Int rax
 
 
 
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	      align   16
+EndgameScale_KBPsK:
+
+ND_String 'W'
+ND_UInt64 qword[rbp+Pos.typeBB+8*White]
+ND_String 'B'
+ND_UInt64 qword[rbp+Pos.typeBB+8*Black]
+ND_String 'P'
+ND_UInt64 qword[rbp+Pos.typeBB+8*Pawn]
+ND_String 'N'
+ND_UInt64 qword[rbp+Pos.typeBB+8*Knight]
+ND_String 'B'
+ND_UInt64 qword[rbp+Pos.typeBB+8*Bishop]
+ND_String 'R'
+ND_UInt64 qword[rbp+Pos.typeBB+8*Rook]
+ND_String 'Q'
+ND_UInt64 qword[rbp+Pos.typeBB+8*Queen]
+ND_String 'K'
+ND_UInt64 qword[rbp+Pos.typeBB+8*King]
+
+	; r8 = pawns
+	; r9 = strong pieces
+		mov   r8, qword[rbp+Pos.typeBB+8*Pawn]
+		mov   r9, qword[rbp+Pos.typeBB+8*rcx]
+	; are all of the pawns on B or G file?
+		mov   r10, not FileBBB
+	       test   r8, r10
+		 jz   .AllOnBFile
+		mov   r10, not FileGBB
+	       test   r8, r10
+		 jz   .AllOnGFile
+	; are all of the strong pawns on A or H file?
+		and   r8, r9
+		mov   rax, not FileABB
+		mov   r11, LightSquares
+		mov   edx, SQ_A8
+	       test   r8, rax
+		 jz   .OnAFile
+		mov   rax, not FileHBB
+		not   r11
+		add   edx, 7
+	       test   r8, rax
+		 jz   .OnHFile
+	; else return none
+.ReturnNone:
+		mov   eax, SCALE_FACTOR_NONE
+ND_String 'KBPsK scale: '
+ND_Int rax
+		ret
+
+	      align   8
+.OnHFile:
+.OnAFile:
+		and   r9, qword[rbp+Pos.typeBB+8*Bishop]
+	; r9 = strong bishop bitboard
+		neg   rcx
+		xor   r11, rcx
+	; r11 = color bb of queening square
+		mov   rax, qword[rbp+Pos.typeBB+8*King]
+		and   rax, qword[rbp+Pos.typeBB+8*(rcx+1)]
+		bsf   rax, rax
+	; eax = weak king square
+		and   ecx, 56
+		xor   edx, ecx
+	; edx = queening square
+	       test   r11, r9
+		jnz   .ReturnNone
+	; bishop is opp color as queening square
+		shl   eax, 6
+		cmp   byte[SquareDistance+rdx+rax], 2
+		jae   .ReturnNone
+	; distance(queeningSq, kingSq) <= 1
+		xor   eax, eax
+ND_String 'KBPsK scale: '
+ND_Int rax
+		ret
+
+	      align   8
+.AllOnBFile:
+.AllOnGFile:
+	; r8 = pawns
+		xor   ecx, 1
+	; ecx = weak side
+		mov   r11, qword[rbp+Pos.typeBB+8*rcx]
+	; r11 = weak pieces
+	      movzx   eax, word[rbx+State.npMaterial+2*rcx]
+		and   r8, r11
+		 jz   .ReturnNone
+	       test   eax, eax
+		jnz   .ReturnNone
+		and   r11, qword[rbp+Pos.typeBB+8*King]
+		bsf   r11, r11
+	; r11 = weakKingSq
+		xor   ecx, 1
+	; ecx = strong side
+		 jz   .BlackIsWeak
+		bsf   r8, r8
+		jmp   .WhiteIsWeak
+	.BlackIsWeak:
+		bsr   r8, r8
+	.WhiteIsWeak:
+	; r8 = weakPawnSq
+		mov   r10, qword[rbp+Pos.typeBB+8*Bishop]
+		and   r10, r9
+		bsf   r10, r10
+	; r10 = bishopSq
+	       imul   edx, ecx, 7
+		mov   eax, r8d
+		shr   eax, 3
+		xor   eax, edx
+		cmp   eax, RANK_7
+		jne   .ReturnNone
+	; relative_rank(strongSide, weakPawnSq) == RANK_7
+		lea   eax, [2*rcx-1]
+		lea   eax, [r8+8*rax]
+	; eax = weakPawnSq + pawn_push(weakSide)
+		mov   rdx, qword[rbp+Pos.typeBB+8*Pawn]
+		and   rdx, r9
+		 bt   rdx, rax
+		jnc   .ReturnNone
+	; pos.pieces(strongSide, PAWN) & (weakPawnSq + pawn_push(weakSide))
+		and   r9, qword[rbp+Pos.typeBB+8*King]
+		bsf   r9, r9
+	; r9 = strongKingSq
+	       blsr   rax, rdx
+	; rax is zero if strong has one pawn
+		 jz   @f
+		xor   r10d, r8d
+		and   r10d, 01001b
+		 jz   .ReturnNone
+		cmp   r10d, 01001b
+		 je   .ReturnNone
+    @@: ; opposite_colors(bishopSq, weakPawnSq) || pos.count<PAWN>(strongSide) == 1)
+		shl   r8, 6
+	      movzx   eax, byte[SquareDistance+r8+r11]
+	      movzx   edx, byte[SquareDistance+r8+r9]
+		cmp   eax, 3
+		jae   .ReturnNone
+		cmp   eax, edx
+		 ja   .ReturnNone
+	       imul   edx, ecx, 56
+		xor   edx, r11d
+		cmp   edx, SQ_A7
+		 jb   .ReturnNone
+		xor   eax, eax
+ND_String 'KBPsK scale: '
+ND_Int rax
+		ret
+
+
+
+if 0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	      align   16
 EndgameScale_KBPsK:
@@ -579,6 +735,8 @@ ND_Int rax
 ND_String 'KBPsK scale: '
 ND_Int rax
 		ret
+
+end if
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -67,10 +67,10 @@ UpdateStats:
 		mov   eax, r12d
 		and   eax, 63
 		mov   r9d, eax
-		shr   edx, 12
+		shr   edx, 14
 	      movzx   eax, byte[rbp+Pos.board+rax]
-		 or   al, byte[CaptureOrPromotion_or+rdx]
-		and   al, byte[CaptureOrPromotion_and+rdx]
+		 or   al, byte[_CaptureOrPromotion_or+rdx]
+		and   al, byte[_CaptureOrPromotion_and+rdx]
 		jnz   .Return
 
 		shr   ecx, 6

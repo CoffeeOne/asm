@@ -86,6 +86,7 @@ See:
 .to_   equ r9
 .attackers    equ r15
 .occupied     equ r14
+.stm	      equ r13
 .b	      equ r12
 .stmAttackers equ r11
 
@@ -98,6 +99,7 @@ See:
 		and   r9d, 63
 .HaveFromTo:
 
+SD_String 'see'
 ProfileInc See
 
 	       push   r12 r13 r14 r15 rcx rsi rdi
@@ -116,30 +118,29 @@ ProfileInc See
 	; r12d = type
 	; r13d = (side to move) *8
 	      movzx   r12d, byte[rbp+Pos.board+r8]
-		mov   r13d, r12d
+		mov   .stm, r12
 		and   r12d, 7
-		and   r13d, 8
+		and   .stm, 8
 
 	; set initial gain
 	      movzx   eax, byte[rbp+Pos.board+.to_]
 		mov   eax, dword[PieceValue_MG+4*rax]
 	       push   rax
 
+SD_String 'p'
+SD_Int rax
+
+
 	; r14 = occupied
 	; r15 = attackers
 
 		mov   .occupied, qword[rbp+Pos.typeBB+8*White]
 		 or   .occupied, qword[rbp+Pos.typeBB+8*Black]
-	      vmovq   xmm0, .occupied
 		btr   .occupied, .from_
 
-		cmp   ecx, MOVE_TYPE_CASTLE
+		cmp   ecx, mMOVE_TYPE_EPCAP
 		jae   .Special
 .EpCaptureRet:
-		xor   r13, 8
-		mov   .stmAttackers, [rbp+Pos.typeBB+r13]
-	      vmovq   xmm1, .stmAttackers
-
 	; king
 		mov   .attackers, qword[KingAttacks+8*r9]
 		and   .attackers, qword[rbp+Pos.typeBB+8*King]
@@ -166,15 +167,30 @@ ProfileInc See
 		 or   .attackers, rdx
 
 		and   .attackers, .occupied
-
+		btc   .occupied, .to_
 		mov   eax, dword[PieceValue_MG+4*r12]
+
+.GetNew:
+		xor   .stm, 8
+		mov   .stmAttackers, [rbp+Pos.typeBB+.stm]
 		and   .stmAttackers, .attackers
+		mov   rcx, qword[rbx+State.blockersForKing+.stm]
+		and   rcx, qword[rbp+Pos.typeBB+.stm]
+	       test   rcx, .stmAttackers
+		 jz   @f
+		mov   rdx, qword[rbx+State.pinnersForKing+.stm]
+		and   rdx, .occupied
+		cmp   rdx, qword[rbx+State.pinnersForKing+.stm]
+		jne   @f
+		not   rcx
+		and   .stmAttackers, rcx
+	@@:    test   .stmAttackers, .stmAttackers
 		 jz   .NoAttackers
 .AttackerLoop:
 		sub   eax, dword[rsp]
 	       push   rax
-
-	      vpxor   xmm1, xmm1, xmm0
+SD_String 'p'
+SD_Int rax
 
 		mov   eax, PawnValueMg
 		mov   .b, qword[rbp+Pos.typeBB+8*Pawn]
@@ -197,13 +213,27 @@ ProfileInc See
 		mov   .b, qword[rbp+Pos.typeBB+8*Queen]
 		and   .b, .stmAttackers
 		jnz   .FoundQueen
-.FoundKing:
 
-		cmp   .attackers, .stmAttackers
-		 je   .SwapDone
+.FoundKing:
+		xor   .stm, 8
+		mov   .stmAttackers, [rbp+Pos.typeBB+.stm]
+		and   .stmAttackers, .attackers
+		mov   rcx, qword[rbx+State.blockersForKing+.stm]
+		and   rcx, qword[rbp+Pos.typeBB+.stm]
+	       test   rcx, .stmAttackers
+		 jz   @f
+		mov   rdx, qword[rbx+State.pinnersForKing+.stm]
+		and   rdx, .occupied
+		cmp   rdx, qword[rbx+State.pinnersForKing+.stm]
+		jne   @f
+		not   rcx
+		and   .stmAttackers, rcx
+	@@:    test   .stmAttackers, .stmAttackers
+		 jz   .NoAttackers
+
 		pop   rax
+
 .NoAttackers:
-.SwapDone:
 	      vmovq   rdx, xmm7
 		pop   rax
 		cmp   rsp, rdx
@@ -216,7 +246,7 @@ ProfileInc See
 		 jb   @b
 .Return:
 		pop   rdi rsi rcx r15 r14 r13 r12
-SD_String 'see:'
+SD_String 'r'
 SD_Int rax
 SD_String '|'
 		ret
@@ -226,36 +256,27 @@ SD_String '|'
 .FoundQueen:
 	       blsi   .b, .b, rcx
 		xor   .occupied, .b
-	      vmovq   .stmAttackers, xmm1
 		mov   eax, QueenValueMg
-
       BishopAttacks   rdx, .to_, .occupied, r10
 		and   rdx, rsi
 		 or   .attackers, rdx
 	RookAttacks   rdx, r9, .occupied, r10
 		and   rdx, rdi
 		 or   .attackers, rdx
-
 		and   .attackers, .occupied
-		and   .stmAttackers, .attackers
-		jnz   .AttackerLoop
-		jmp   .SwapDone
+		jmp   .GetNew
+
 
 	      align   8
 .FoundRook:
 	       blsi   .b, .b, rcx
 		xor   .occupied, .b
-	      vmovq   .stmAttackers, xmm1
 		mov   eax, RookValueMg
-
 	RookAttacks   rdx, .to_, .occupied, r10
 		and   rdx, rdi
 		 or   .attackers, rdx
-
 		and   .attackers, .occupied
-		and   .stmAttackers, .attackers
-		jnz   .AttackerLoop
-		jmp   .SwapDone
+		jmp   .GetNew
 
 
 	      align   8
@@ -263,16 +284,11 @@ SD_String '|'
 .FoundPawn:
 	       blsi   .b, .b, rcx
 		xor   .occupied, .b
-	      vmovq   .stmAttackers, xmm1
-
       BishopAttacks   rdx, .to_, .occupied, r10
 		and   rdx, rsi
 		 or   .attackers, rdx
-
 		and   .attackers, .occupied
-		and   .stmAttackers, .attackers
-		jnz   .AttackerLoop
-		jmp   .SwapDone
+		jmp   .GetNew
 
 
 
@@ -282,19 +298,16 @@ SD_String '|'
 		xor   .occupied, .b
 	      vmovq   .stmAttackers, xmm1
 		mov   eax, KnightValueMg
-
 		and   .attackers, .occupied
-
-		and   .stmAttackers, .attackers
-		jnz   .AttackerLoop
-		jmp   .SwapDone
+		jmp   .GetNew
 
 
 	      align   8
 .Special:
-		cmp   ecx, MOVE_TYPE_CASTLE
+		cmp   ecx, mMOVE_TYPE_CASTLE
 		 je   .Castle
 .EpCapture:
+SD_String 'ep'
 		lea   eax, [r9+2*r13-8]
 		btr   .occupied, rax
 		mov   dword[rsp], PawnValueMg
@@ -305,7 +318,7 @@ SD_String '|'
 		pop   rax
 		xor   eax, eax
 		pop   rdi rsi rcx r15 r14 r13 r12
-SD_String 'see:'
+SD_String 'r'
 SD_Int rax
 SD_String '|'
 		ret

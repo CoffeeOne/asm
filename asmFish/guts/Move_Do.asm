@@ -238,7 +238,7 @@ ProfileInc moveUnpack
 .ResetEpRet:
 	; capture
 		mov   eax, r11d
-		cmp   ecx, MOVE_TYPE_CASTLE
+		cmp   ecx, mMOVE_TYPE_CASTLE
 		 je   .Castling
 		and   eax, 7
 		jnz   .Capture
@@ -286,7 +286,7 @@ end if
 		and   word[rbx+sizeof.State+State.rule50], ax
 
 	; special moves
-		cmp   ecx, MOVE_TYPE_PROM
+		cmp   ecx, mMOVE_TYPE_PROM
 		jae   .Special
 		cmp   r11d, 16
 		 je   .DoublePawn
@@ -503,11 +503,11 @@ jnz Move_Do_post_posill
 	      align   8
 .Special:
 		xor   edx, edx
-		cmp   ecx, MOVE_TYPE_EPCAP
+		cmp   ecx, mMOVE_TYPE_EPCAP
 		 je   .EpCapture
 
 .Promotion:
-		lea   ecx, [rcx-MOVE_TYPE_PROM+8*rsi+Knight]
+		lea   ecx, [rcx-mMOVE_TYPE_PROM+8*rsi+Knight]
 
 
 if PEDANTIC

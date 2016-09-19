@@ -38,7 +38,7 @@ include 'linux64.asm'
 
 
 include 'BasicMacros.asm'
-include 'StructsNew.asm'
+include 'Structs.asm'
 include 'Debug.asm'
 
 
@@ -98,8 +98,9 @@ end if
 
 align 16
 RazorMargin dd 483, 570, 603, 554
-CaptureOrPromotion_or  db  0,-1,-1,-1,-1,0,-1,0
-CaptureOrPromotion_and db -1,-1,-1,-1,-1,0,-1,0
+_CaptureOrPromotion_or	db  0,	  -1, -1, 0
+_CaptureOrPromotion_and db -1,	  -1, -1, 0
+
 
 align 16
 constd:
@@ -181,10 +182,10 @@ szGreetingEnd:
 	NewLineData
 	db 'option name NodeAffinity type string default all'
 	NewLineData
-	db 'option name Priority type combo default normal var normal var low'
+	db 'option name Priority type combo default normal var normal var low var idle'
 	NewLineData
 
-	db 'option name TTPath type string default <empty>'
+	db 'option name TTFile type string default <empty>'
 	NewLineData
 	db 'option name TTSave type button'
 	NewLineData
@@ -254,6 +255,7 @@ sz_winc 		db 'winc',0
 sz_binc 		db 'binc',0
 sz_mate 		db 'mate',0
 sz_name 		db 'name',0
+sz_idle 		db 'idle',0
 sz_hash 		db 'hash',0
 sz_stop 		db 'stop',0
 sz_value		db 'value',0
@@ -263,7 +265,7 @@ sz_wtime		db 'wtime',0
 sz_btime		db 'btime',0
 sz_perft		db 'perft',0
 sz_bench		db 'bench',0
-sz_ttpath		db 'ttpath',0
+sz_ttfile		db 'ttfile',0
 sz_ttsave		db 'ttsave',0
 sz_ttload		db 'ttload',0
 sz_ponder		db 'ponder',0
@@ -346,6 +348,8 @@ sz_VirtualAllocExNuma		     db 'VirtualAllocExNuma',0
 sz_SetThreadGroupAffinity	     db 'SetThreadGroupAffinity',0
 sz_GetLogicalProcessorInformationEx  db 'GetLogicalProcessorInformationEx',0
 align 8
+ Frequency   dq ?
+ Period      dq ?
  hProcess    dq ?
  hStdOut     dq ?
  hStdIn      dq ?
@@ -358,8 +362,6 @@ align 8
 }
 
 align 8
- Frequency   dq ?
- Period      dq ?
  LargePageMinSize dq ?
  CmdLineStart	  dq ?
  InputBuffer	  dq ?	   ; input buffer has dynamic allocation
@@ -465,21 +467,18 @@ IsPawnMasks:	  rb 16
 align 64
 Reductions	   rd 2*2*64*64
 FutilityMoveCounts rd 16*2
-if PEDANTIC
-MoveEncoding	 rd 16
-end if
 DrawValue	   rd 2 	   ; is is updated when threads start to think
 
 
 ;;;;;;;;;; data for evaluation ;;;;;;;;;;;;;;;;;;;;
 align 64
+Connected rd 2*2*2*8
+
 MobilityBonus_Knight rd 16
 MobilityBonus_Bishop rd 16
 MobilityBonus_Rook   rd 16
 MobilityBonus_Queen  rd 32
 
-KingDanger rd 512
-Connected rd 2*2*2*8
 Lever rd 8
 ShelterWeakness rd 4*8
 StormDanger:
@@ -565,12 +564,12 @@ include 'SliderBlockers.asm'
 include 'TablebaseCore.asm'
 include 'Tablebase.asm'
 include 'Endgame.asm'
-include 'EvaluateNew.asm'
+include 'Evaluate.asm'
 
 include 'MainHash_Probe.asm'
 
 include 'Move_IsPseudoLegal.asm'
-include 'SetCheckInfoNew.asm'
+include 'SetCheckInfo.asm'
 include 'Move_GivesCheck.asm'
 
 include 'UpdateStats.asm'
@@ -585,6 +584,7 @@ include 'Move_IsLegal.asm'
 include 'Move_Do.asm'
 include 'Move_Undo.asm'
 
+
 	      align   16
 QSearch_NonPv_NoCheck:
 	    QSearch   _NONPV_NODE, 0
@@ -597,15 +597,16 @@ QSearch_Pv_InCheck:
 	      align   16
 QSearch_Pv_NoCheck:
 	    QSearch   _PV_NODE, 0
+
+
 	      align   16
 Search_NonPv:
 	    search   _NONPV_NODE
 
-
-include 'SeeNew.asm'
+include 'SeeTest.asm'
+include 'See.asm'
 include 'Move_DoNull.asm'
 include 'CheckTime.asm'
-
 include 'Castling.asm'
 
 	     align   16

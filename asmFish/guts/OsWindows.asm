@@ -806,6 +806,9 @@ _SetPriority_Low:
 		mov   edx, BELOW_NORMAL_PRIORITY_CLASS
 		jmp   @b
 
+_SetPriority_Idle:
+		mov   edx, IDLE_PRIORITY_CLASS
+		jmp   @b
 
 
 
