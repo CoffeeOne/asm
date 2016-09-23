@@ -21,10 +21,6 @@ SetCheckInfo:
 .go:
 ProfileInc SetCheckInfo
 
-		mov   r11, qword[rbp+Pos.typeBB+8*Rook]
-		mov   r10, qword[rbp+Pos.typeBB+8*Bishop]
-		 or   r11, qword[rbp+Pos.typeBB+8*Queen]
-		 or   r10, qword[rbp+Pos.typeBB+8*Queen]
 		mov   byte[rbx+State.ksq], r14l
 
 		mov   rax, qword[WhitePawnAttacks+rsi+8*r14]
@@ -34,24 +30,31 @@ ProfileInc SetCheckInfo
 		shr   esi, 6+3
       BishopAttacks   rax, r14, rdi, r8
 	RookAttacks   rdx, r14, rdi, r8
-		xor   r9, r9
+		xor   r11, r11
 		mov   qword[rbx+State.checkSq+8*Bishop], rax
 		mov   qword[rbx+State.checkSq+8*Rook], rdx
 		 or   rax, rdx
 		mov   qword[rbx+State.checkSq+8*Queen], rax
-		mov   qword[rbx+State.checkSq+8*King], r9
+		mov   qword[rbx+State.checkSq+8*King], r11
 
+	; for their king
 		xor   eax, eax
-     SliderBlockers   rax, r13, r14, qword[rbx+State.pinnersForKing+8*rsi],\
-		      rdi, r11, r10, rcx, rdx, r8, r9
+     SliderBlockers   rax, r13, r14, r11,\
+		      rdi, r12,\
+		      rcx, rdx, r8, r9
+		mov   qword[rbx+State.pinnersForKing+8*rsi], r11
 		mov   qword[rbx+State.blockersForKing+8*rsi], rax
 		and   rax, r13
 		mov   qword[rbx+State.dcCandidates], rax
 
+	; for our king
+		xor   r11, r11
 		xor   esi, 1
 		xor   eax, eax
-     SliderBlockers   rax, r12, r15, qword[rbx+State.pinnersForKing+8*rsi],\
-		      rdi, r11, r10, rcx, rdx, r8, r9
+     SliderBlockers   rax, r12, r15, r11,\
+		      rdi, r13,\
+		      rcx, rdx, r8, r9
+		mov   qword[rbx+State.pinnersForKing+8*rsi], r11
 		mov   qword[rbx+State.blockersForKing+8*rsi], rax
 		and   rax, r13
 		mov   qword[rbx+State.pinned], rax

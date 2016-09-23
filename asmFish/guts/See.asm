@@ -80,15 +80,15 @@ See:
 	; out: eax > 0 good capture
 	;      eax < 0 bad capture
 
-.from equ r8d
-.to   equ r9d
-.from_ equ r8
-.to_   equ r9
-.attackers    equ r15
-.occupied     equ r14
-.stm	      equ r13
-.b	      equ r12
-.stmAttackers equ r11
+from equ r8d
+to   equ r9d
+from_ equ r8
+to_   equ r9
+attackers    equ r15
+occupied     equ r14
+stm	     equ r13
+b	     equ r12
+stmAttackers equ r11
 
 	; r8 = from
 	; r9 = to
@@ -118,12 +118,12 @@ ProfileInc See
 	; r12d = type
 	; r13d = (side to move) *8
 	      movzx   r12d, byte[rbp+Pos.board+r8]
-		mov   .stm, r12
+		mov   stm, r12
 		and   r12d, 7
-		and   .stm, 8
+		and   stm, 8
 
 	; set initial gain
-	      movzx   eax, byte[rbp+Pos.board+.to_]
+	      movzx   eax, byte[rbp+Pos.board+to_]
 		mov   eax, dword[PieceValue_MG+4*rax]
 	       push   rax
 
@@ -134,101 +134,91 @@ SD_Int rax
 	; r14 = occupied
 	; r15 = attackers
 
-		mov   .occupied, qword[rbp+Pos.typeBB+8*White]
-		 or   .occupied, qword[rbp+Pos.typeBB+8*Black]
-		btr   .occupied, .from_
+		mov   occupied, qword[rbp+Pos.typeBB+8*White]
+		 or   occupied, qword[rbp+Pos.typeBB+8*Black]
+		btr   occupied, from_
 
 		cmp   ecx, mMOVE_TYPE_EPCAP
 		jae   .Special
 .EpCaptureRet:
 	; king
-		mov   .attackers, qword[KingAttacks+8*r9]
-		and   .attackers, qword[rbp+Pos.typeBB+8*King]
+		mov   attackers, qword[KingAttacks+8*r9]
+		and   attackers, qword[rbp+Pos.typeBB+8*King]
 	; pawn
 		mov   rax, qword[BlackPawnAttacks+8*r9]
 		and   rax, qword[rbp+Pos.typeBB+8*White]
 		and   rax, qword[rbp+Pos.typeBB+8*Pawn]
-		 or   .attackers, rax
+		 or   attackers, rax
 		mov   rax, qword[WhitePawnAttacks+8*r9]
 		and   rax, qword[rbp+Pos.typeBB+8*Black]
 		and   rax, qword[rbp+Pos.typeBB+8*Pawn]
-		 or   .attackers, rax
+		 or   attackers, rax
 	; knight
 		mov   rax, qword[KnightAttacks+8*r9]
 		and   rax, qword[rbp+Pos.typeBB+8*Knight]
-		 or   .attackers, rax
+		 or   attackers, rax
 	; rook + queen
-	RookAttacks   rdx, .to_, r14, r10
+	RookAttacks   rdx, to_, r14, r10
 		and   rdx, rdi
-		 or   .attackers, rdx
+		 or   attackers, rdx
 	; bishop + queen
-      BishopAttacks   rdx, .to_, .occupied, r10
+      BishopAttacks   rdx, to_, occupied, r10
 		and   rdx, rsi
-		 or   .attackers, rdx
+		 or   attackers, rdx
 
-		and   .attackers, .occupied
-		btc   .occupied, .to_
+		btc   occupied, to_
 		mov   eax, dword[PieceValue_MG+4*r12]
 
 .GetNew:
-		xor   .stm, 8
-		mov   .stmAttackers, [rbp+Pos.typeBB+.stm]
-		and   .stmAttackers, .attackers
-		mov   rcx, qword[rbx+State.blockersForKing+.stm]
-		and   rcx, qword[rbp+Pos.typeBB+.stm]
-	       test   rcx, .stmAttackers
-		 jz   @f
-		mov   rdx, qword[rbx+State.pinnersForKing+.stm]
-		and   rdx, .occupied
-		cmp   rdx, qword[rbx+State.pinnersForKing+.stm]
-		jne   @f
-		not   rcx
-		and   .stmAttackers, rcx
-	@@:    test   .stmAttackers, .stmAttackers
+		xor   stm, 8
+		and   attackers, occupied
+
+		mov   stmAttackers, qword[rbp+Pos.typeBB+stm]
+		and   stmAttackers, attackers
 		 jz   .NoAttackers
-.AttackerLoop:
+	       test   stmAttackers, qword[rbx+State.blockersForKing+stm]
+		 jz   @f
+		mov   rdx, qword[rbx+State.pinnersForKing+stm]
+		and   rdx, occupied
+		cmp   rdx, qword[rbx+State.pinnersForKing+stm]
+		jne   @f
+		mov   rcx, qword[rbx+State.blockersForKing+stm]
+		not   rcx
+		and   stmAttackers, rcx
+		 jz   .NoAttackers
+	@@:
+
 		sub   eax, dword[rsp]
 	       push   rax
 SD_String 'p'
 SD_Int rax
 
 		mov   eax, PawnValueMg
-		mov   .b, qword[rbp+Pos.typeBB+8*Pawn]
-		and   .b, .stmAttackers
+		mov   b, qword[rbp+Pos.typeBB+8*Pawn]
+		and   b, stmAttackers
 		jnz   .FoundPawn
 
-		mov   .b, qword[rbp+Pos.typeBB+8*Knight]
-		and   .b, .stmAttackers
+		mov   b, qword[rbp+Pos.typeBB+8*Knight]
+		and   b, stmAttackers
 		jnz   .FoundKnight
 
 		mov   eax, BishopValueMg
-		mov   .b, qword[rbp+Pos.typeBB+8*Bishop]
-		and   .b, .stmAttackers
+		mov   b, qword[rbp+Pos.typeBB+8*Bishop]
+		and   b, stmAttackers
 		jnz   .FoundBishop
 
-		mov   .b, qword[rbp+Pos.typeBB+8*Rook]
-		and   .b, .stmAttackers
+		mov   b, qword[rbp+Pos.typeBB+8*Rook]
+		and   b, stmAttackers
 		jnz   .FoundRook
 
-		mov   .b, qword[rbp+Pos.typeBB+8*Queen]
-		and   .b, .stmAttackers
+		mov   b, qword[rbp+Pos.typeBB+8*Queen]
+		and   b, stmAttackers
 		jnz   .FoundQueen
 
 .FoundKing:
-		xor   .stm, 8
-		mov   .stmAttackers, [rbp+Pos.typeBB+.stm]
-		and   .stmAttackers, .attackers
-		mov   rcx, qword[rbx+State.blockersForKing+.stm]
-		and   rcx, qword[rbp+Pos.typeBB+.stm]
-	       test   rcx, .stmAttackers
-		 jz   @f
-		mov   rdx, qword[rbx+State.pinnersForKing+.stm]
-		and   rdx, .occupied
-		cmp   rdx, qword[rbx+State.pinnersForKing+.stm]
-		jne   @f
-		not   rcx
-		and   .stmAttackers, rcx
-	@@:    test   .stmAttackers, .stmAttackers
+		xor   stm, 8
+		mov   stmAttackers, qword[rbp+Pos.typeBB+stm]
+		and   stmAttackers, attackers
 		 jz   .NoAttackers
 
 		pop   rax
@@ -254,51 +244,50 @@ SD_String '|'
 
 	      align   8
 .FoundQueen:
-	       blsi   .b, .b, rcx
-		xor   .occupied, .b
+	       blsi   b, b, rcx
+		xor   occupied, b
 		mov   eax, QueenValueMg
-      BishopAttacks   rdx, .to_, .occupied, r10
+      BishopAttacks   rdx, to_, occupied, r10
 		and   rdx, rsi
-		 or   .attackers, rdx
-	RookAttacks   rdx, r9, .occupied, r10
+		 or   attackers, rdx
+	RookAttacks   rdx, r9, occupied, r10
 		and   rdx, rdi
-		 or   .attackers, rdx
-		and   .attackers, .occupied
+		 or   attackers, rdx
+		and   attackers, occupied
 		jmp   .GetNew
 
 
 	      align   8
 .FoundRook:
-	       blsi   .b, .b, rcx
-		xor   .occupied, .b
+	       blsi   b, b, rcx
+		xor   occupied, b
 		mov   eax, RookValueMg
-	RookAttacks   rdx, .to_, .occupied, r10
+	RookAttacks   rdx, to_, occupied, r10
 		and   rdx, rdi
-		 or   .attackers, rdx
-		and   .attackers, .occupied
+		 or   attackers, rdx
+		and   attackers, occupied
 		jmp   .GetNew
 
 
 	      align   8
 .FoundBishop:
 .FoundPawn:
-	       blsi   .b, .b, rcx
-		xor   .occupied, .b
-      BishopAttacks   rdx, .to_, .occupied, r10
+	       blsi   b, b, rcx
+		xor   occupied, b
+      BishopAttacks   rdx, to_, occupied, r10
 		and   rdx, rsi
-		 or   .attackers, rdx
-		and   .attackers, .occupied
+		 or   attackers, rdx
+		and   attackers, occupied
 		jmp   .GetNew
 
 
 
 	      align   8
 .FoundKnight:
-	       blsi   .b, .b, rcx
-		xor   .occupied, .b
-	      vmovq   .stmAttackers, xmm1
+	       blsi   b, b, rcx
+		xor   occupied, b
 		mov   eax, KnightValueMg
-		and   .attackers, .occupied
+		and   attackers, occupied
 		jmp   .GetNew
 
 
@@ -309,7 +298,7 @@ SD_String '|'
 .EpCapture:
 SD_String 'ep'
 		lea   eax, [r9+2*r13-8]
-		btr   .occupied, rax
+		btr   occupied, rax
 		mov   dword[rsp], PawnValueMg
 		jmp   .EpCaptureRet
 
@@ -326,6 +315,15 @@ SD_String '|'
 
 
 
+restore from
+restore to
+restore from_
+restore to_
+restore attackers
+restore occupied
+restore stm
+restore b
+restore stmAttackers
 
 
 

@@ -74,18 +74,18 @@ SeeTest:
 	; out: eax = 1 if  see >= edx
 	;      eax = 0 if  see <  edx
 
-.from	equ r8
-.from_d equ r8d
-.to	equ r9
-.to_d	equ r9d
-.stm	      equ rsi
-.stm_d	      equ esi
-.attackers    equ r15
-.occupied     equ r14
-.bb	      equ r13
-.stmAttackers equ r12
-.swap	      equ edx
-.res	      equ eax
+from   equ r8
+from_d equ r8d
+to     equ r9
+to_d   equ r9d
+stm	     equ rsi
+stm_d	     equ esi
+attackers    equ r15
+occupied     equ r14
+bb	     equ r13
+stmAttackers equ r12
+swap	     equ edx
+res	     equ eax
 
 
 	; r8 = from
@@ -96,12 +96,30 @@ SeeTest:
 		mov   r9d, ecx
 		and   r9d, 63
 .HaveFromTo:
+
+ProfileInc SeeTest
+
+if DEBUG
+push	rcx rdx r8 r9
+and	ecx, 15 shl 12
+shl	r8d, 6
+add	ecx, r8d
+add	ecx, r9d
+mov	dword[rbp+Pos.debugDWORD1], ecx
+mov	dword[rbp+Pos.debugDWORD2], edx
+call	See
+pop	r9 r8 rdx rcx
+cmp	eax, edx
+setge	al
+movzx	eax, al
+push	rax
+end if
 	       push   r12 r13 r14 r15 rsi rdi
 
-		mov   .occupied, qword[rbp+Pos.typeBB+8*White]
-		 or   .occupied, qword[rbp+Pos.typeBB+8*Black]
-		btr   .occupied, .from
-		btc   .occupied, .to
+		mov   occupied, qword[rbp+Pos.typeBB+8*White]
+		 or   occupied, qword[rbp+Pos.typeBB+8*Black]
+		btr   occupied, from
+		btc   occupied, to
 
 	; r10 = bishops + queens
 	; r11 = rooks + queens
@@ -111,203 +129,251 @@ SeeTest:
 		 or   r10, rdi
 		 or   r11, rdi
 
-		neg   .swap
-		xor   .res, .res
+		neg   swap
+		xor   res, res
 
 		cmp   ecx, mMOVE_TYPE_EPCAP shl 12
 		jae   .Special
 
-	      movzx   ecx, byte[rbp+Pos.board+.to]
-		add   .swap, dword[PieceValue_MG+4*rcx]
-		cmp   .swap, .res
-		 jl   .Return
+	      movzx   ecx, byte[rbp+Pos.board+to]
+		add   swap, dword[PieceValue_MG+4*rcx]
+		cmp   swap, res
+		 jl   .Return	; 2.35%
 
 .EpCaptureRet:
 
-		xor   .res, 1	; .res = 1
-		neg   .swap
-	      movzx   .stm_d, byte[rbp+Pos.board+.from]
-		add   .swap, dword[PieceValue_MG+4*.stm]  ; use piece_on(from)
-		and   .stm_d, 8
-		xor   .stm_d, 8
-		cmp   .swap, .res
-		 jl   .Return
+		xor   res, 1   ; .res = 1
+		neg   swap
+	      movzx   stm_d, byte[rbp+Pos.board+from]
+		add   swap, dword[PieceValue_MG+4*stm]	; use piece_on(from)
+		and   stm_d, 8
+		cmp   swap, res
+		 jl   .Return	; 13.63%
 
 	; at this point .from register r8 is free
 	;  rdi, rcx are also free
 
-		mov   .attackers, qword[KingAttacks+8*.to]
-		and   .attackers, qword[rbp+Pos.typeBB+8*King]
-		mov   rdi, qword[BlackPawnAttacks+8*.to]
+		mov   attackers, qword[KingAttacks+8*to]
+		and   attackers, qword[rbp+Pos.typeBB+8*King]
+		mov   rdi, qword[BlackPawnAttacks+8*to]
 		and   rdi, qword[rbp+Pos.typeBB+8*White]
 		and   rdi, qword[rbp+Pos.typeBB+8*Pawn]
-		 or   .attackers, rdi
-		mov   rdi, qword[WhitePawnAttacks+8*.to]
+		 or   attackers, rdi
+		mov   rdi, qword[WhitePawnAttacks+8*to]
 		and   rdi, qword[rbp+Pos.typeBB+8*Black]
 		and   rdi, qword[rbp+Pos.typeBB+8*Pawn]
-		 or   .attackers, rdi
-		mov   rdi, qword[KnightAttacks+8*.to]
+		 or   attackers, rdi
+		mov   rdi, qword[KnightAttacks+8*to]
 		and   rdi, qword[rbp+Pos.typeBB+8*Knight]
-		 or   .attackers, rdi
-	RookAttacks   rdi, .to, .occupied, r8
+		 or   attackers, rdi
+	RookAttacks   rdi, to, occupied, r8
 		and   rdi, r11
-		 or   .attackers, rdi
-      BishopAttacks   rdi, .to, .occupied, r8
+		 or   attackers, rdi
+      BishopAttacks   rdi, to, occupied, r8
 		and   rdi, r10
-		 or   .attackers, rdi
-		and   .attackers, .occupied
+		 or   attackers, rdi
 
 .Loop:	      ; while (1) {
+		xor   stm_d, 8
+		and   attackers, occupied
 
-		mov   .stmAttackers, qword[rbp+Pos.typeBB+.stm]
-		and   .stmAttackers, .attackers
-		 jz   .Return
-		mov   rcx, qword[rbx+State.blockersForKing+.stm]
-		and   rcx, qword[rbp+Pos.typeBB+.stm]
-	       test   rcx, .stmAttackers
-		 jz   @f
-		mov   rdi, qword[rbx+State.pinnersForKing+.stm]
-		and   rdi, .occupied
-		cmp   rdi, qword[rbx+State.pinnersForKing+.stm]
-		jne   @f
+	; modified old
+		mov   stmAttackers, qword[rbp+Pos.typeBB+stm]
+		and   stmAttackers, attackers
+		 jz   .Return	; 44.45%
+	       test   stmAttackers, qword[rbx+State.blockersForKing+stm]
+		 jz   @f	; 98.90%
+		mov   rdi, qword[rbx+State.pinnersForKing+stm]
+		and   rdi, occupied
+		cmp   rdi, qword[rbx+State.pinnersForKing+stm]
+		jne   @f	; 53.42%
+		mov   rcx, qword[rbx+State.blockersForKing+stm]
 		not   rcx
-		and   .stmAttackers, rcx
-		 jz   .Return
+		and   stmAttackers, rcx
+		 jz   .Return	; 45.06%
 	@@:
-		neg   .swap
-		xor   .res, 1
 
-		mov   .bb, qword[rbp+Pos.typeBB+8*Pawn]
-		and   .bb, .stmAttackers
+      ;  ; new 0.3% speed loss with or without branches
+      ;          xor   ecx, ecx
+      ;          mov   stmAttackers, qword[rbp+Pos.typeBB+stm]
+      ;          and   stmAttackers, attackers
+      ;         andn   rdi, occupied, qword[rbx+State.pinnersForKing+stm]
+      ;        cmovz   rcx, qword[rbx+State.blockersForKing+stm]
+      ;         andn   stmAttackers, rcx, stmAttackers
+      ;           jz   .Return
+
+		neg   swap
+		xor   res, 1
+
+		mov   bb, qword[rbp+Pos.typeBB+8*Pawn]
+		and   bb, stmAttackers
 		jnz   .FoundPawn
 
-		mov   .bb, qword[rbp+Pos.typeBB+8*Knight]
-		and   .bb, .stmAttackers
+		mov   bb, qword[rbp+Pos.typeBB+8*Knight]
+		and   bb, stmAttackers
 		jnz   .FoundKnight
 
-		mov   .bb, qword[rbp+Pos.typeBB+8*Bishop]
-		and   .bb, .stmAttackers
+		mov   bb, qword[rbp+Pos.typeBB+8*Bishop]
+		and   bb, stmAttackers
 		jnz   .FoundBishop
 
-		mov   .bb, qword[rbp+Pos.typeBB+8*Rook]
-		and   .bb, .stmAttackers
+		mov   bb, qword[rbp+Pos.typeBB+8*Rook]
+		and   bb, stmAttackers
 		jnz   .FoundRook
 
-		mov   .bb, qword[rbp+Pos.typeBB+8*Queen]
-		and   .bb, .stmAttackers
+		mov   bb, qword[rbp+Pos.typeBB+8*Queen]
+		and   bb, stmAttackers
 		jnz   .FoundQueen
 
 .FoundKing:
-		xor   .stm, 8
-		mov   .stmAttackers, qword[rbp+Pos.typeBB+.stm]
-		and   .stmAttackers, .attackers
-		mov   rcx, qword[rbx+State.blockersForKing+.stm]
-		and   rcx, qword[rbp+Pos.typeBB+.stm]
-	       test   rcx, .stmAttackers
-		 jz   @f
-		mov   rdi, qword[rbx+State.pinnersForKing+.stm]
-		and   rdi, .occupied
-		cmp   rdi, qword[rbx+State.pinnersForKing+.stm]
-		jne   @f
-		not   rcx
-		and   .stmAttackers, rcx
-	@@:
-
+		xor   stm_d, 8
+		mov   stmAttackers, qword[rbp+Pos.typeBB+stm]
+		and   stmAttackers, attackers
 	; .res has already been flipped so we must do
 	;    return stmAttackers ? res^1 : res;
-		neg   .stmAttackers
-		adc   .res, 0
-		and   .res, 1
+		neg   stmAttackers
+		adc   res, 0
+		and   res, 1
 
 .Return:
 		pop   rdi rsi r15 r14 r13 r12
+if DEBUG
+pop	rcx
+cmp	eax, ecx
+jne	SeeTest_Error
+end if
 		ret
 
 
 	      align   8
 .FoundQueen:
-		add   .swap, QueenValueMg
-		cmp   .swap, .res
+		add   swap, QueenValueMg
+		cmp   swap, res
 		 jl   .Return
 
-	       blsi   .bb, .bb, r8
-		xor   .occupied, .bb
-      BishopAttacks   rdi, .to, .occupied, r8
+	       blsi   bb, bb, r8
+		xor   occupied, bb
+      BishopAttacks   rdi, to, occupied, r8
 		and   rdi, r10
-		 or   .attackers, rdi
-	RookAttacks   rdi, .to, .occupied, r8
+		 or   attackers, rdi
+	RookAttacks   rdi, to, occupied, r8
 		and   rdi, r11
-		 or   .attackers, rdi
-		and   .attackers, .occupied
-		xor   .stm_d, 8
+		 or   attackers, rdi
 		jmp   .Loop
 
 
 .FoundRook:
-		add   .swap, RookValueMg
-		cmp   .swap, .res
+		add   swap, RookValueMg
+		cmp   swap, res
 		 jl   .Return
 
-	       blsi   .bb, .bb, r8
-		xor   .occupied, .bb
-	RookAttacks   rdi, .to, .occupied, r8
+	       blsi   bb, bb, r8
+		xor   occupied, bb
+	RookAttacks   rdi, to, occupied, r8
 		and   rdi, r11
-		 or   .attackers, rdi
-		and   .attackers, .occupied
-		xor   .stm_d, 8
+		 or   attackers, rdi
 		jmp   .Loop
 
 
 	      align   8
 .FoundBishop:
-		add   .swap, BishopValueMg-PawnValueMg
+		add   swap, BishopValueMg-PawnValueMg
 .FoundPawn:
-		add   .swap, PawnValueMg
-		cmp   .swap, .res
+		add   swap, PawnValueMg
+		cmp   swap, res
 		 jl   .Return
 
-	       blsi   .bb, .bb, rcx
-		xor   .occupied, .bb
-      BishopAttacks   rdi, .to, .occupied, r8
+	       blsi   bb, bb, rcx
+		xor   occupied, bb
+      BishopAttacks   rdi, to, occupied, r8
 		and   rdi, r10
-		 or   .attackers, rdi
-		and   .attackers, .occupied
-		xor   .stm_d, 8
+		 or   attackers, rdi
 		jmp   .Loop
 
 
 
 	      align   8
 .FoundKnight:
-		add   .swap, KnightValueMg
-		cmp   .swap, .res
+		add   swap, KnightValueMg
+		cmp   swap, res
 		 jl   .Return
 
-	       blsi   .bb, .bb, rcx
-		xor   .occupied, .bb
-		and   .attackers, .occupied
-		xor   .stm_d, 8
+	       blsi   bb, bb, rcx
+		xor   occupied, bb
 		jmp   .Loop
 
 
 	      align   8
-.Special:	; if we get here, .swap = -value
-		;            and  .res = 0
+.Special:
+	; if we get here, .swap = -value
+	;            and  .res = 0
 		cmp   ecx, mMOVE_TYPE_CASTLE shl 12
 		jae   .Castle
 		mov   ecx, dword[rbp+Pos.sideToMove]
 		shl   ecx, 3
-		lea   ecx, [.to+2*rcx-8]
-		btr   .occupied, rcx
-		add   .swap, PawnValueMg
-		cmp   .swap, .res
+		lea   ecx, [to+2*rcx-8]
+		btr   occupied, rcx
+		add   swap, PawnValueMg
+		cmp   swap, res
 		jge   .EpCaptureRet
-.Return2:
+.ReturnSpecial:
+
 		pop   rdi rsi r15 r14 r13 r12
+if DEBUG
+pop	rcx
+cmp	eax, ecx
+jne	SeeTest_Error
+end if
 		ret
 
 .Castle:
 	; return 0 <= swap
-		cmp   .swap, 0x80000000
-		adc   .res, .res
-		jmp   .Return2
+		cmp   swap, 0x80000000
+		adc   res, res
+		jmp   .ReturnSpecial
+
+
+if DEBUG
+SeeTest_Error:
+lea	rdi, [Output]
+push	rcx rax
+szcall	PrintString, 'SeeTest mismatch: SeeTest = '
+pop	rax
+call	PrintUnsignedInteger
+szcall	PrintString, 'while (See >= value) = '
+pop	rax
+call	PrintUnsignedInteger
+PrintNewLine
+mov	rax, 'move:   '
+stosq
+mov	ecx, dword[rbp+Pos.debugDWORD1]
+mov	edx, dword[rbp+Pos.chess960]
+call	PrintUciMoveLong
+PrintNewLine
+mov	rax, 'value:  '
+stosq
+movsxd	rax, dword[rbp+Pos.debugDWORD2]
+call	PrintSignedInteger
+PrintNewLine
+mov	qword[rbp+Pos.state], rbx
+call	Position_PrintSmall
+lea	rdi, [Output]
+call	_ErrorBox
+int3
+end if
+
+
+
+restore from
+restore from_d
+restore to
+restore to_d
+restore stm
+restore stm_d
+restore attackers
+restore occupied
+restore bb
+restore stmAttackers
+restore swap
+restore res
+

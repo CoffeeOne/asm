@@ -154,9 +154,9 @@ match =1, PEDANTIC {		; absolute index means not relative to the type of piece i
  chess960    rd 1
  _copy_size rb 0
 match =1, DEBUG {
- debugPointer	rq 1
- debugMove	rd 1
-		rd 1
+ debugQWORD1	rq 1   ; some general purpose data
+ debugDWORD1	rd 1   ; for asserting the asserts in debug
+ debugDWORD2	rd 1   ;
 }
  state		rq 1 ; the current state struct
  stateTable	rq 1 ; the beginning of the vector of State structs

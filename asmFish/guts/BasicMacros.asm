@@ -192,7 +192,7 @@ local .start,.skip,.done
 macro popcnt15 a,x,t {
 local .start,.skip,.done
  match =1, CPU_HAS_POPCNT \{
-		     popcnt  a,x
+	     popcnt   a, x
  \}
  match =0, CPU_HAS_POPCNT \{
 
@@ -254,17 +254,17 @@ macro blsr a,b,t {
 ; carry flag is not handled consistently
 macro blsi a,b,t {
  match =1, CPU_HAS_BMI1 \{
-	       blsi  a,b
+	       blsi   a, b
  \}
  match =0, CPU_HAS_BMI1 \{
 	if a eq b
-		mov  t, a
-		neg  a
-		and  a, t
+		mov   t, a
+		neg   a
+		and   a, t
 	else
-		mov  a, b
-		neg  a
-		and  a, b
+		mov   a, b
+		neg   a
+		and   a, b
 	end if
  \}
 }

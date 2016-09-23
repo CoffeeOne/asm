@@ -87,9 +87,8 @@ jmp	Move_DoNull_GoError
 
 
 Move_DoNull_GoError:
-mov	al, 10
-stosb
-mov	rcx, qword[rbp+Pos.debugPointer]
+PrintNewLine
+mov	rcx, qword[rbp+Pos.debugQWORD1]
 call	PrintString
 mov	al, 10
 stosb

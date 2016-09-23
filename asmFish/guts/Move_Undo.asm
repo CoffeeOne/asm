@@ -6,12 +6,12 @@ Move_Undo:
 
 	       push   rsi
 
-match =1, DEBUG {
-		mov   dword[rbp+Pos.debugMove], ecx
-}
+if DEBUG
+mov	dword[rbp+Pos.debugDWORD1], ecx
+end if
 
 match=2, VERBOSE {
-		sub   dword[rbp+Pos.gamePly], 1
+sub	dword[rbp+Pos.gamePly], 1
 ;push rax rcx rsi rdi
 ;mov esi, ecx
 ;lea rdi, [VerboseOutput]
@@ -40,8 +40,6 @@ match=2, VERBOSE {
 		mov   r9d, ecx
 		and   r9d, 63	; r9d = to
 		shr   ecx, 12
-
-ProfileInc moveUnpack
 
 	      movzx   r11d, byte[rbx+State.capturedPiece]      ; r11 = TO PIECE
 	      movzx   r10d, byte[rbp+Pos.board+r9]	       ; r10 = FROM PIECE
@@ -73,9 +71,9 @@ end if
 		and   r11d, 7
 		jnz   .Captured
 
-match =1, DEBUG {
-jmp   Move_Undo_Check
-}
+if DEBUG
+jmp	Move_Undo_Check
+end if
 		pop   rsi
 		ret
 
@@ -94,9 +92,9 @@ if PEDANTIC
 		mov   byte[rbp+Pos.pieceEnd+rax], cl
 end if
 
-match =1, DEBUG {
-jmp   Move_Undo_Check
-}
+if DEBUG
+jmp	Move_Undo_Check
+end if
 		pop   rsi
 		ret
 
@@ -149,9 +147,9 @@ end if
 		xor   edx, edx
 		and   r11d, 7
 		jnz   .PromCapture
-match =1, DEBUG {
-jmp   Move_Undo_Check
-}
+if DEBUG
+jmp	Move_Undo_Check
+end if
 		pop   rsi
 		ret
 
@@ -169,9 +167,9 @@ if PEDANTIC
 		mov   byte[rbp+Pos.pieceEnd+rax], cl
 end if
 
-match =1, DEBUG {
-jmp   Move_Undo_Check
-}
+if DEBUG
+jmp	Move_Undo_Check
+end if
 		pop   rsi
 		ret
 
@@ -196,9 +194,9 @@ if PEDANTIC
 		mov   byte[rbp+Pos.pieceEnd+r11], al
 end if
 
-match =1, DEBUG {
-jmp   Move_Undo_Check
-}
+if DEBUG
+jmp	Move_Undo_Check
+end if
 		pop   rsi
 		ret
 
@@ -280,9 +278,9 @@ end if
 		mov   qword[rbp+Pos.typeBB+8*King], r10
 		mov   qword[rbp+Pos.typeBB+8*Rook], r11
 
-match =1, DEBUG {
-jmp   Move_Undo_Check
-}
+if DEBUG
+jmp	Move_Undo_Check
+end if
 		pop   rsi
 		ret
 
@@ -290,26 +288,23 @@ jmp   Move_Undo_Check
 
 
 match =1, DEBUG {
-
 Move_Undo_Check:
-		mov   qword[rbp+Pos.state], rbx
-	       call   Position_IsLegal
-	       test   eax, eax
-		jnz   @f
-		pop   rsi
-		ret
+mov	qword[rbp+Pos.state], rbx
+call	Position_IsLegal
+test	eax, eax
+jnz	@f
+pop	rsi
+ret
 @@:
-		lea   rdi,[DebugOutput]
-		mov   rax, 'UndoMove'
-	      stosq
-		mov   al, 10
-	      stosb
-		mov   ecx, dword[rbp+Pos.debugMove]
-		xor   edx, edx
-	       call   PrintUciMoveLong
-		mov   eax, 10
-	      stosd
-		lea   rdi, [DebugOutput]
-	       call   _ErrorBox
-	       int3
+lea	rdi,[DebugOutput]
+mov	rax, 'UndoMove'
+stosq
+PrintNewLine
+mov	ecx, dword[rbp+Pos.debugDWORD1]
+xor	edx, edx
+call	PrintUciMoveLong
+PrintNewLine
+lea	rdi, [DebugOutput]
+call	_ErrorBox
+int3
 }

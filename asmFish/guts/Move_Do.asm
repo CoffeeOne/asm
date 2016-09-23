@@ -7,119 +7,119 @@
 Move_Do__UciParseMoves:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'DoMove__UciParseMoves',0	   }
 
 Move_Do__PerftGen_Root:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'DoMove__PerftGen_Root',0	   }
 
 Move_Do__PerftGen_Branch:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'DoMove__PerftGen_Branch',0	     }
 
 Move_Do__ExtractPonderFromTT:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'DoMove__ExtractPonderFromTT',0		 }
 
 Move_Do__Search:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'DoMove__Search',0			 }
 
 Move_Do__QSearch:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'DoMove__QSearch',0			 }
 
 Move_Do__EasyMoveMng:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'DoMove__EasyMoveMng',0			 }
 
 Move_Do__RootMove_InsertPVInTT:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'DoMove__RootMove_InsertPVInTT',0	 }
 
 Move_Do__ProbCut:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'DoMove__ProbCut',0	   }
 
 Move_Do__Tablebase_ProbeAB:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'Move_Do__Tablebase_ProbeAB',0	      }
 
 Move_Do__Tablebase_ProbeWDL:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'Move_Do__Tablebase_ProbeWDL',0	       }
 
 Move_Do__Tablebase_ProbeDTZNoEP:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'Move_Do__Tablebase_ProbeDTZNoEP',0	   }
 
 Move_Do__Tablebase_ProbeDTZNoEP_SuccessIsNeg_WdlIsPositive:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'Move_Do__Tablebase_ProbeDTZNoEP_SuccessIsNeg_WdlIsPositive',0	      }
 
 Move_Do__Tablebase_ProbeDTZNoEP_SuccessIsNeg_WdlIsNonpositive:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'Move_Do__Tablebase_ProbeDTZNoEP_SuccessIsNeg_WdlIsNonpositive',0	 }
 
 Move_Do__Tablebase_ProbeDTZ:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'Move_Do__Tablebase_ProbeDTZ',0	       }
 
 Move_Do__Tablebase_RootProbe:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'Move_Do__Tablebase_RootProbe',0 	}
 
 Move_Do__Tablebase_RootProbeWDL:
 match =1, DEBUG {
 lea	rax, [@f]
-mov	[rbp+Pos.debugPointer], rax
+mov	[rbp+Pos.debugQWORD1], rax
 jmp	Move_Do
 @@: db 'Move_Do__Tablebase_RootProbeWDL',0	   }
 
@@ -138,21 +138,20 @@ Move_Do:
 match =1, DEBUG {
 push	rcx rdx
 sub	rsp, MAX_MOVES*sizeof.ExtMove
-mov	dword[rbp+Pos.debugMove], ecx
+mov	dword[rbp+Pos.debugDWORD1], ecx
 lea	rdi, [DebugOutput]
 mov	qword[rbp+Pos.state], rbx
 call	Position_PrintSmall
-mov	eax, 10
-stosd
+PrintNewLine
 mov	qword[rbp+Pos.state], rbx
 call	Position_IsLegal
 test	eax, eax
 jnz	Move_Do_posill
-mov	ecx, dword[rbp+Pos.debugMove]
+mov	ecx, dword[rbp+Pos.debugDWORD1]
 call	Move_IsPseudoLegal
 test	rax, rax
 jz	Move_Do_pillegal
-mov	ecx, dword[rbp+Pos.debugMove]
+mov	ecx, dword[rbp+Pos.debugDWORD1]
 call	Move_IsLegal
 test	eax, eax
 jz	Move_Do_illegal
@@ -162,7 +161,7 @@ mov	rcx, rsp
 @@:
 cmp	rcx, rdi
 jae	Move_Do_DoIllegal
-mov	eax, dword[rbp+Pos.debugMove]
+mov	eax, dword[rbp+Pos.debugDWORD1]
 cmp	eax, dword[rcx]
 lea	rcx, [rcx+sizeof.ExtMove]
 jne	@b
@@ -612,7 +611,7 @@ end if
 	; r11 = our rook
 
 match =1, DEBUG {
-mov eax, dword[rbp+Pos.debugMove]
+mov eax, dword[rbp+Pos.debugDWORD1]
 cmp eax, dword[rbp-Thread.rootPos+Thread.castling_movgen+8*rsi+0]
 je @f
 cmp eax, dword[rbp-Thread.rootPos+Thread.castling_movgen+8*rsi+4]
@@ -751,11 +750,11 @@ jmp	Move_Do_GoError
 
 Move_Do_GoError:
 PrintNewLine
-mov	rcx, qword[rbp+Pos.debugPointer]
+mov	rcx, qword[rbp+Pos.debugQWORD1]
 call	PrintString
 PrintNewLine
 mov	rax, 'move:   '
-mov	ecx, dword[rbp+Pos.debugMove]
+mov	ecx, dword[rbp+Pos.debugDWORD1]
 mov	edx, dword[rbp+Pos.chess960]
 call	PrintUciMoveLong
 PrintNewLine

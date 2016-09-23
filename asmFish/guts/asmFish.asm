@@ -70,6 +70,7 @@ if PROFILE > 0
    .Search_PV	 dq 0
    .Search_NONPV dq 0
    .See 	dq 0
+   .SeeTest	dq 0
    .SetCheckInfo  dq 0
    .SetCheckInfo2 dq 0
 
