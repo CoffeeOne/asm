@@ -103,6 +103,18 @@ macro vdivsd a,b,c {
  \}
 }
 
+
+
+macro vcomisd a,b {
+ match =1, CPU_HAS_AVX1 \{
+	    vcomisd   a, b
+ \}
+ match =0, CPU_HAS_AVX1 \{
+	     comisd   a, b
+ \}
+}
+
+
 macro vcomisd a,b {
  match =1, CPU_HAS_AVX1 \{
 	    vcomisd   a, b
@@ -193,6 +205,20 @@ macro vmulsd a,b,c {
     else
 	     movaps   a, b
 	      mulsd   a, c
+    end if
+ \}
+}
+
+macro vmovhlps a,b,c {
+ match =1, CPU_HAS_AVX1 \{
+	   vmovhlps  a, b, c
+ \}
+ match =0, CPU_HAS_AVX1 \{
+    if a eq b
+	    movhlps  a, c
+    else
+	     movaps  a, b
+	    movhlps  a, c
     end if
  \}
 }

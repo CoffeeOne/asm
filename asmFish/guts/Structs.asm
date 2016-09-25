@@ -262,6 +262,15 @@ struct Options
 ends
 
 
+struct Weakness
+ targetLoss   rq 1
+ prng	      rq 1
+	      rq 1
+ multiPV      rd 1
+ enabled      rb 1
+	      rb 3
+ends
+
 
 struct EasyMoveMng
  expectedPosKey rq 1

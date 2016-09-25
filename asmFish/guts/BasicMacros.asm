@@ -113,6 +113,26 @@ macro print description,number
 }
 
 
+macro IntegerStringData number {
+local value, pos, digit, disp
+    value=number
+    if value < 0
+	db '-'
+	value = -value
+    end if
+    pos=10000000
+    disp=0
+    repeat 8
+	digit=value/pos
+	value=value-(digit*pos)
+	pos=pos/10
+	disp = disp or digit
+	if disp | pos=1
+	    db '0' + digit
+	end if
+    end repeat
+}
+
 ; use this macro if you are too lazy to touch beforehand the required amount of stack
 ;  for functions that need more than 4K of stack space
 ; here we assume that the current stack pointer is in the commited range

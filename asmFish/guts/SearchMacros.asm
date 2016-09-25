@@ -755,9 +755,12 @@ end if
 	      setne   cl
 		and   al, cl
 		mov   edx, dword[.ttValue]
-		add   edx, VALUE_KNOWN_WIN-1
-		cmp   edx, 2*(VALUE_KNOWN_WIN-1)
-	      setbe   cl
+	    ;    add   edx, VALUE_KNOWN_WIN-1
+	    ;    cmp   edx, 2*(VALUE_KNOWN_WIN-1)
+	    ;  setbe   cl
+		cmp   edx, VALUE_NONE
+	      setne   cl
+
 		and   al, cl
 		mov   edx, dword[.excludedMove]
 	       test   edx, edx
@@ -922,9 +925,11 @@ end if
 		mov   r9l, byte[.cutNode]
 	       test   eax, eax
 		 jz   .12done
-
+		mov   eax, -VALUE_MATE
 		sub   edx, r8d
 		sub   edx, r8d
+		cmp   edx, eax
+	      cmovl   edx, eax
 		lea   ecx, [rdx-1]
 		mov   edi, edx
 		sar   r8d, 1

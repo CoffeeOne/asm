@@ -1,3 +1,8 @@
+; optional features
+USE_WEAKNESS equ 0
+match ='base', VERSION_POST {
+USE_WEAKNESS equ 1
+}
 
 ; some bounds
 MAX_MOVES equ 224    ; this should be >= the # pseudo legal moves for any position

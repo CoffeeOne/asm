@@ -111,6 +111,15 @@ end virtual
 		cmp   rcx, rdx
 		 jb   .save_next
 
+if USE_WEAKNESS
+	; if using weakness, reset multiPV local variable
+		cmp   byte[weakness.enabled], 0
+		 je   @f
+		mov   eax, dword[weakness.multiPV]
+		mov   dword[.multiPV], eax
+	@@:
+end if
+
 	; MultiPV loop. We perform a full root search for each PV line
 		 or   r14d, -1
 .multipv_loop:
@@ -156,21 +165,6 @@ end virtual
 		add   rcx, qword[rbp+Pos.rootMovesVec+RootMovesVec.table]
 		mov   rdx, qword[rbp+Pos.rootMovesVec+RootMovesVec.ender]
 	       call   RootMovesVec_StableSort
-;match =1, VERBOSE {
-;                lea   rdi, [Output]
-;               call   RootMovesVec_Print
-;                lea   rcx, [Output]
-;               call   _WriteOut
-;}
-;
-;        ; Write PV back to the transposition table in case the relevant entries have been overwritten during the search.
-;                mov   esi, r14d
-;        .insert_next:
-;               imul   ecx, esi, sizeof.RootMove
-;                add   rcx, qword[rbp+Pos.rootMovesVec+RootMovesVec.table]
-;               call   RootMove_InsertPVInTT
-;                sub   esi, 1
-;                jns   .insert_next
 
 	; If search has been stopped, break immediately. Sorting and writing PV back to TT is safe because RootMoves is still valid, although it refers to the previous iteration.
 		mov   al, byte[signals.stop]
@@ -272,6 +266,13 @@ match =0, VERBOSE {
 		mov   r10d, dword[.multiPV]
 	       call   DisplayInfo_Uci
 
+
+
+if USE_WEAKNESS
+		cmp   byte[weakness.enabled], 0
+		 je   .multipv_loop
+	       call   Weakness_SetMultiPV
+end if
 		jmp   .multipv_loop
 
 .multipv_done:
@@ -426,21 +427,24 @@ GD_NewLine
 		mov   dword[DrawValue+4*rax], ecx
 		add   byte[mainHash.date], 4
 
-;if CPU_VERSION eq 'base'
-;        ; when weakness is not 0, set multipv and change maximumTime
-;                mov   ecx, dword[options.weakness]
-;               test   ecx, ecx
-;                 jz   .no_weakness
-;                shr   ecx, 4
-;                add   ecx, 2
-;                mov   dword[options.multiPV], ecx
-;                lea   eax, [rcx-1]
-;                mul   dword[time.optimumTime]
-;                add   eax, dword[time.maximumTime]
-;                div   ecx
-;                mov   dword[time.maximumTime], eax
-;.no_weakness:
-;end if
+if USE_WEAKNESS
+	; set multipv and change maximumTime
+		cmp   byte[weakness.enabled], 0
+		 je   @f
+	; start with one line, may be changed by Weakness_PickMove
+		mov   dword[weakness.multiPV], 1
+	; bring maximum time closer to optimumtime
+	  vcvtsd2si   ecx, qword[weakness.targetLoss]
+		shr   ecx, 5
+		add   ecx, 1
+		mov   eax, dword[time.optimumTime]
+		mul   ecx
+		add   eax, dword[time.maximumTime]
+		add   ecx, 1
+		div   ecx
+		mov   dword[time.maximumTime], eax
+	@@:
+end if
 
 	; check for mate
 		mov   r8, qword[rbp+Pos.rootMovesVec+RootMovesVec.ender]
@@ -496,11 +500,10 @@ GD_NewLine
 		cmp   r8, qword[rbp+Pos.rootMovesVec+RootMovesVec.table]
 		 je   .mate_bestmove
 
-;if CPU_VERSION eq 'base'
-;                mov   ecx, dword[options.weakness]
-;               test   ecx, ecx
-;                jnz   .pick_weak_move
-;end if
+if USE_WEAKNESS
+		cmp   byte[weakness.enabled], 0
+		jne   .pick_weak_move
+end if
 
 	; find best thread  index esi
 		xor   esi, esi
@@ -550,12 +553,12 @@ GD_NewLine
 		pop   r15 rdi rsi rbx rbp
 		ret
 
-;if CPU_VERSION eq 'base'
-;.pick_weak_move:
-;               call   Weakness_PickMove
-;                xor   esi, esi
-;                jmp   .display_move
-;end if
+if USE_WEAKNESS
+.pick_weak_move:
+	       call   Weakness_PickMove
+		xor   esi, esi
+		jmp   .display_move
+end if
 
 
 .mate:
@@ -664,8 +667,10 @@ end virtual
 
 		mov   rbp, rcx
 		mov   rbx, qword[rcx+Pos.state]
-	       call   SetCheckInfo
 		mov   ecx, dword[r15+RootMove.pv+4*0]
+		xor   eax, eax
+		cmp   eax, ecx
+		 je   .Return
 	       call   Move_GivesCheck
 		mov   ecx, dword[r15+RootMove.pv+4*0]
 		mov   edx, eax
@@ -695,7 +700,7 @@ end virtual
 		mov   ecx, dword[r15+RootMove.pv+4*0]
 	       call   Move_Undo
 		mov   eax, r14d
-
+.Return:
 		add   rsp, .localsize
 		pop   r15 r14 r13 rdi rsi rbx rbp
 		ret

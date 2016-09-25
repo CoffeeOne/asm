@@ -175,11 +175,13 @@ szGreeting:
 szGreetingEnd:
 	db 'id author TypingALot'
 	NewLineData
-	db 'option name Hash type spin default 16 min 1 max 1048576'
+	db 'option name Hash type spin default 16 min 1 max '
+	IntegerStringData (1 shl MAX_HASH_LOG2MB)
 	NewLineData
 	db 'option name LargePages type check default false'
 	NewLineData
-	db 'option name Threads type spin default 1 min 1 max 256'
+	db 'option name Threads type spin default 1 min 1 max '
+	IntegerStringData MAX_THREADS
 	NewLineData
 	db 'option name NodeAffinity type string default all'
 	NewLineData
@@ -220,6 +222,16 @@ szGreetingEnd:
 	NewLineData
 	db 'option name SyzygyPath type string default <empty>'
 	NewLineData
+
+
+if USE_WEAKNESS
+	db 'option name UCI_LimitStrength type check default false'
+	NewLineData
+	db 'option name UCI_Elo type spin default 1000 min 0 max 3300'
+	NewLineData
+end if
+
+
 	db 'uciok'
 sz_NewLine:
 	NewLineData
@@ -299,6 +311,11 @@ sz_syzygyprobedepth	db 'syzygyprobedepth',0
 sz_syzygy50moverule	db 'syzygy50moverule',0
 sz_syzygyprobelimit	db 'syzygyprobelimit',0
 
+if USE_WEAKNESS
+sz_uci_limitstrength	db 'uci_limitstrength',0
+sz_uci_elo		db 'uci_elo',0
+end if
+
 BenchFens: ;fens must be separated by one or more space char
 .bench_fen00 db "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",' '
 .bench_fen01 db "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 10",' '
@@ -362,6 +379,12 @@ align 8
  __imp_GetLogicalProcessorInformationEx dq ?
 }
 
+match ='L', VERSION_OS {
+align 8
+ argv dq ?
+ envp dq ?
+}
+
 align 8
  LargePageMinSize dq ?
  CmdLineStart	  dq ?
@@ -382,6 +405,11 @@ match ='L', VERSION_OS {
 segment readable writeable
 }
 
+
+if USE_WEAKNESS
+align 16
+ weakness	Weakness
+end if
 
 align 16
  options	Options
@@ -629,6 +657,9 @@ include 'EasyMoveMng.asm'
 include 'Think.asm'
 include 'TimeMng.asm'
 
+if USE_WEAKNESS
+include 'Weakness.asm'
+end if
 
 include 'Position.asm'
 include 'MainHash.asm'
@@ -655,9 +686,16 @@ include 'OsLinux.asm'
 
 
 Start:
+
+match ='L', VERSION_OS {
+		mov   qword[argv], rsi
+		mov   qword[envp], rdx
+}
 match ='W', VERSION_OS {
 	       push   rbp
 }
+
+
 	       call   _SetStdHandles
 	       call   _SetFrequency
 	       call   _CheckCPU

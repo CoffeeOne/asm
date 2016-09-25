@@ -960,6 +960,8 @@ end virtual
 .found:
 		bsf   ecx, ecx
 		add   edx, ecx
+		cmp   edx, r12d
+		jne   .TryNextCore
 
 	; edx is now lsb of this thread_siblings
 	; loop through nodes and add up cores

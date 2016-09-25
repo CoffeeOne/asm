@@ -1,6 +1,5 @@
 
 
-	      align   16
 Math_Rand_i:
 	; in: rcx address of Prng
 	; out: rax  integer in [0,2^64)
@@ -19,7 +18,6 @@ Math_Rand_i:
 	       imul   rax, rdx
 		ret
 
-	     align   16
 Math_Rand_d:
 	; in: rcx address of Prng
 	; out: xmm0  scalar double in [0,1)   *should* be uniformly distr
@@ -38,8 +36,6 @@ Math_Rand_d:
 		ret
 
 
-
-	      align   16
 Math_Exp_d_d:
 	; xmm0 = Exp[xmm0]
 	       push   rbx
@@ -73,63 +69,80 @@ Math_Exp_d_d:
 		pop   rbx
 		ret
 
-	      align   16
 Math_Log_d_d:
 	; xmm0 = Log[xmm0]
-	       push  rbx
-		sub  rsp, 32
-	     vmovsd  qword[rsp+8H], xmm0
-		fld  qword[rsp+8H]
+	       push   rbx
+		sub   rsp, 32
+	     vmovsd   qword[rsp+8H], xmm0
+		fld   qword[rsp+8H]
 	      fwait
-	     fnstcw  word[rsp+1CH]
+	     fnstcw   word[rsp+1CH]
 	      fwait
-	     fnstcw  word[rsp+1EH]
-		 or  word[rsp+1EH], 0C00H
-	      fldcw  word[rsp+1EH]
+	     fnstcw   word[rsp+1EH]
+		 or   word[rsp+1EH], 0C00H
+	      fldcw   word[rsp+1EH]
 	     fldln2
-	       fxch  st1
+	       fxch   st1
 	      fyl2x
-	      fldcw  word[rsp+1CH]
-	       fstp  qword[rsp+8H]
-	     vmovsd  xmm0, qword[rsp+8H]
-		add  rsp, 32
-		pop  rbx
+	      fldcw   word[rsp+1CH]
+	       fstp   qword[rsp+8H]
+	     vmovsd   xmm0, qword[rsp+8H]
+		add   rsp, 32
+		pop   rbx
 		ret
 
 
-	      align   16
-Math_Erfd:
-	; xmm0 = Erf[xmm0]
+Math_Lerp:
+	; in: rcx address of table start
+	;     rdx address of table end
+	;     xmm0 value to convert
+	; out: xmm0 converted value
+	;
+	; first coordinates in table are assumed sorted and distinct
 
-	     vmovsd   xmm4, qword[.mask]
-	     vmovsd   xmm5, qword[.a0]
-	    vandnpd   xmm3, xmm4, xmm0
-	     vandpd   xmm0, xmm0, xmm4
+x equ xmm0 ; input and output
+t equ xmm1 ; (ax,ay)
+a equ xmm2 ; (ax,ay)
+b equ xmm3 ; (bx,by)
+current equ rcx
+ender	equ rdx
 
-	     vmulsd   xmm1, xmm0, qword[.a4]
-	     vaddsd   xmm1, xmm1, qword[.a3]
-	     vmulsd   xmm1, xmm1, xmm0
-	     vaddsd   xmm1, xmm1, qword[.a2]
-	     vmulsd   xmm1, xmm1, xmm0
-	     vaddsd   xmm1, xmm1, qword[.a1]
-	     vmulsd   xmm1, xmm1, xmm0
-	     vaddsd   xmm1, xmm1, xmm5
-
-	     vdivsd   xmm0, xmm5, xmm1
-	     vsubsd   xmm5, xmm5, xmm0
-
-	      vorpd   xmm0, xmm5, xmm3
+	    vmovaps   b, dqword[current]
+		add   current, 16
+	    vcomisd   x, b
+		jbe   .Return_by
+.Loop:
+	    vmovaps   a, b
+	    vmovaps   b, dqword[current]
+		add   current, 16
+	    vcomisd   x, b
+		jbe   .Lerp
+		cmp   current, ender
+		 jb   .Loop
+.Return_by:
+	   vmovhlps   x, x, b
+		ret
+.Lerp:
+	     vsubpd   b, b, a
+	   vmovhlps   t, t, b
+	     vsubsd   x, x, a
+	     vdivsd   t, t, b
+	     vmulsd   x, x, t
+	   vmovhlps   t, t, a
+	     vaddsd   x, x, t
 		ret
 
-align 8
-.mask dq 0x7FFFFFFFFFFFFFFF
-.a0 dq 1.0
-.a1 dq 0.278393
-.a2 dq 0.230389
-.a3 dq 0.000972
-.a4 dq 0.078108
 
-		      align   16
+restore x
+restore t
+restore a
+restore b
+restore current
+restore ender
+
+
+
+
 Math_Power_d_dd:
 	; xmm0 = Power[xmm0, xmm1]
 	       push   rsi

@@ -688,6 +688,21 @@ UciSetOption:
 	       test   eax, eax
 		jnz   .HashLoad
 
+if USE_WEAKNESS
+		lea   rcx, [sz_uci_limitstrength]
+	       call   CmpStringCaseless
+		lea   rbx, [.UciLimitStrength]
+	       test   eax, eax
+		jnz   .CheckValue
+
+		lea   rcx, [sz_uci_elo]
+	       call   CmpStringCaseless
+		lea   rbx, [.UciElo]
+	       test   eax, eax
+		jnz   .CheckValue
+
+end if
+
 		lea   rdi, [Output]
 		lea   rcx, [sz_error_option]
 	       call   PrintString
@@ -762,14 +777,14 @@ UciSetOption:
 		jnz   .PriorityIdle
 
 		lea   rdi, [Output]
-		mov   rax, 'info str'
+		mov   rax, 'error: u'
 	      stosq
-		mov   rax, 'ing unkn'
+		mov   rax, 'nknown p'
 	      stosq
-		mov   rax, 'own prio'
+		mov   rax, 'riority '
 	      stosq
-		mov   eax, 'rity'
-	      stosd
+		mov   ecx, 64
+	       call   ParseToken
 		jmp   UciWriteOut_NewLine
 
     .PriorityNormal:
@@ -929,6 +944,18 @@ UciSetOption:
 		mov   dword[options.syzygyProbeLimit], eax
 		jmp   UciGetInput
 
+if USE_WEAKNESS
+.UciLimitStrength:
+	       call   ParseBoole
+		mov   byte[weakness.enabled], al
+		jmp   UciGetInput
+.UciElo:
+	       call   ParseInteger
+      ClampUnsigned   eax, 0, 3300
+		mov   ecx, eax
+	       call   Weakness_SetElo
+		jmp   UciGetInput
+end if
 
 
 ;;;;;;;;;;;;

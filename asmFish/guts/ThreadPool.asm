@@ -239,6 +239,9 @@ end if
 		mov   rcx, qword[rbp+Pos.typeBB+8*White]
 		 or   rcx, qword[rbp+Pos.typeBB+8*Black]
 	     popcnt   rcx, rcx, rdx
+		mov   rdx, qword[rbp+RootMovesVec.ender]
+		cmp   rdx, qword[rbp+RootMovesVec.table]
+		jbe   .check_tb_ret
 		sub   eax, ecx
 		sar   eax, 31
 		 or   al, byte[rbx+State.castlingRights]
